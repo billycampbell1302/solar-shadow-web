@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '19c235e70d', u = new URL(location.href);
+    var id = '4a319e9539', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1121,6 +1121,12 @@
     var S = TF.scan;
     if (!S) { out.appendChild(el('div', { class: 'empty' }, TF.owner ? 'No scan yet. Press "Scan deals now".' : 'No scan yet. The owner needs to run one.')); return; }
     if (!(S.v >= 3)) { out.appendChild(el('div', { class: 'card', style: 'margin-top:10px;border-color:var(--ours)' }, 'This scan was made before the 12, 18 and 24 month comparison, the export pairing and the filter for deals we cannot get. ' + (TF.owner ? 'Press "Scan deals now" to get the full picture.' : 'The owner needs to scan again.'))); return; }
+    // what-if price rise: swap in the projections computed for that rise (no spread, one clear number)
+    var SC = window.TFSCEN || 'base', rawS = S;
+    if (SC !== 'base' && S.curScen && S.curScen[SC]) {
+      var mix = function (base, sc) { var o = {}; Object.keys(base).forEach(function (h) { var s = sc && sc[h]; o[h] = s ? [s[0], s[1], s[2], s[2], s[2], base[h][5]] : base[h]; }); return o; };
+      S = Object.assign({}, rawS, { curProj: mix(rawS.curProj, rawS.curScen[SC]), tariffs: rawS.tariffs.map(function (t) { return t.scen && t.scen[SC] ? Object.assign({}, t, { proj: mix(t.proj, t.scen[SC]) }) : t; }) });
+    }
     var only = $('tfOnlyOk').checked, hz = S.horizons, cur = S.current, mdl = S.model, age = Math.round((Date.now() - S.made) / 3600e3);
     var all = S.tariffs.filter(function (t) { return !(only && t.blocked); }), left = S.tariffs.filter(function (t) { return t.blocked; });
     var typeOf = function (t) { return fixedOf(t) ? 'FIXED ' + t.term + ' months' : /tracker|agile|half-hourly/i.test(t.kind) ? 'VARIABLE (follows the market)' : 'VARIABLE (price can change)'; };
@@ -1148,6 +1154,18 @@
       hd.appendChild(el('div', { class: 'sub' }, 'Based on ' + (hc0 > 0 ? 'the next ' + hc0 + ' months' : 'a year') + ' of your real usage' + (mdl && mdl.car ? ' plus the cars' : '') + '. Details below.'));
       out.appendChild(hd);
     })();
+    if (rawS.whatIf && rawS.curScen) {
+      var sb = el('div', { class: 'daybar', style: 'margin-top:10px;flex-wrap:wrap' }); sb.appendChild(el('span', { class: 'sub' }, 'If prices rise from January by:'));
+      [['base', 'Our forecast']].concat(rawS.whatIf.map(function (L) { return [String(L), L === 0 ? 'No rise' : '+' + L + '%']; })).forEach(function (o) {
+        var bt = el('button', { class: 'btn sm' + (SC === o[0] ? ' primary' : ''), type: 'button' }, o[1]); bt.addEventListener('click', function () { window.TFSCEN = o[0]; renderTf(); }); sb.appendChild(bt);
+      });
+      out.appendChild(sb);
+      var flips = rawS.whatIf.map(function (L) {
+        var bestT = null, bestV = 1e18; rawS.tariffs.forEach(function (t) { if (t.blocked && only) return; if (!t.scen || !t.scen[L]) return; var h = hOf(t), v = (t.scen[L][h] || t.scen[L][12] || [0, 0, 1e9])[2] / h; if (v < bestV) { bestV = v; bestT = t; } });
+        return (L === 0 ? 'no rise' : '+' + L + '%') + ': ' + (bestT ? bestT.name : '–');
+      });
+      out.appendChild(el('div', { class: 'sub', style: 'margin:4px 0 0' }, 'Best deal at each rise: ' + flips.join('; ') + '. If these differ, the choice depends on the rise; if not, it does not.'));
+    }
     // comparison basis
     var bar = el('div', { class: 'daybar', style: 'margin-top:10px;flex-wrap:wrap' }); bar.appendChild(el('span', { class: 'sub' }, 'Compare over:'));
     [['own', 'Each deal\'s own term']].concat(hz.map(function (h) { return [String(h), h + ' months']; })).forEach(function (o) {
@@ -1268,6 +1286,14 @@
   function renderCar() {
     var out = $('carOut'); clear(out); $('carMsg').hidden = true; var C2 = CAR; if (!C2) return;
     if (!C2.enabled) { out.appendChild(el('div', { class: 'card', style: 'margin-top:10px' }, 'The car advisor is switched off. Turn it on in Setup under "Electric cars" (CAR_ADVISOR).')); return; }
+    (function () {
+      var r0 = (C2.plan || [])[0], hd = el('div', { class: 'card headline', style: 'margin-top:10px' }), lines = [];
+      if (r0) C2.cars.forEach(function (c) { var x = r0.cars.filter(function (y) { return y.id === c.id; })[0]; if (x && x.charge) lines.push(c.owner + '\'s car: charge from ' + x.fromPct + '% to ' + x.toPct + '% (' + fmt(x.kwh, 1) + ' kWh, about ' + pounds(x.costP) + ')'); });
+      hd.appendChild(el('div', { class: 'sub' }, 'Tonight'));
+      hd.appendChild(el('div', { style: 'font-size:20px;font-weight:650;margin:2px 0' }, !r0 ? 'No plan yet.' : lines.length ? 'Put ' + (lines.length > 1 ? 'both cars' : lines[0].split('\'s')[0] + '\'s car') + ' on the charger.' : 'No car needs charging tonight.'));
+      lines.forEach(function (l) { hd.appendChild(el('div', { class: 'sub' }, l)); });
+      out.appendChild(hd);
+    })();
     var grid = el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px' });
     C2.cars.forEach(function (c) {
       var d = el('div', { class: 'card' });
@@ -1352,6 +1378,15 @@
     if (!S.configured) { msg.hidden = false; msg.textContent = 'Not set up yet. Set up Smart Life in Setup (User Code, sign-in, heater), then press "Test Smart Life heater".'; $('shCalc').hidden = true; clear($('chSh')); clear($('shHeat')); clear($('tblShFc')); return; }
     msg.hidden = true;
     var L = S.latest;
+    (function () {
+      var old = $('shHead'); if (old) old.remove();
+      if (!L) return;
+      var hd = el('div', { class: 'card headline', id: 'shHead', style: 'margin-top:10px' }), outT = L.out === null || L.out === undefined ? '' : ' Outside it is ' + fmt(L.out, 1) + '°C.';
+      hd.appendChild(el('div', { class: 'sub' }, 'Right now'));
+      hd.appendChild(el('div', { style: 'font-size:20px;font-weight:650;margin:2px 0' }, 'The summerhouse is ' + fmt(L.temp, 1) + '°C and the heater is ' + (L.heating === null ? 'not reporting' : L.heating ? 'on' : 'off') + '.'));
+      hd.appendChild(el('div', { class: 'sub' }, 'Read ' + ago(L.ageMin) + '.' + outT));
+      $('shNow').parentNode.insertBefore(hd, $('shNow'));
+    })();
     function stat(label, val, sub) { var c = el('div', { class: 'card' }); c.appendChild(el('div', { class: 'sub' }, label)); c.appendChild(el('div', { style: 'font-size:26px;font-weight:600' }, val)); if (sub) c.appendChild(el('div', { class: 'sub' }, sub)); now.appendChild(c); }
     if (L) {
       stat('Inside now', fmt(L.temp, 1) + '°C', 'Read ' + ago(L.ageMin));
@@ -1611,6 +1646,18 @@
   }
   var mo = new MutationObserver(sync); Array.prototype.forEach.call(document.querySelectorAll('nav.tabs button'), function (b) { mo.observe(b, { attributes: true, attributeFilter: ['aria-selected'] }); });
   sync();
+})();
+</script>
+
+<script>
+/* Setup tidy: Tools tucked away so Settings and sharing lead */
+(function () {
+  var v = document.getElementById('viewSetup'); if (!v) return;
+  Array.prototype.forEach.call(v.querySelectorAll('section'), function (s) {
+    var h = s.querySelector('h2'); if (!h || h.textContent !== 'Tools') return;
+    var d = document.createElement('details'); d.className = 'setgrp'; var sm = document.createElement('summary'); sm.textContent = 'Tools and checks'; var b = document.createElement('div'); b.className = 'body';
+    h.remove(); while (s.firstChild) b.appendChild(s.firstChild); d.appendChild(sm); d.appendChild(b); s.appendChild(d);
+  });
 })();
 </script>
 </body>
