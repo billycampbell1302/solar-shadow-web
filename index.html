@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '69c055c770', u = new URL(location.href);
+    var id = '6d18014cb6', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1196,9 +1196,22 @@
   var TF = null;
   function loadTf() { gs('getTariffs', [(window.__ACCESS__ || {}).key || ''], function (r) { TF = r; renderTf(); }, function (e) { $('tfMsg').textContent = 'Could not load: ' + e; }); }
   $('tfOnlyOk').addEventListener('change', function () { renderTf(); });
+  var tfPoll = 0;
+  function tfWatch(tok, t0) {
+    setTimeout(function () {
+      if (tok !== tfPoll) return;
+      gs('getTariffs', [(window.__ACCESS__ || {}).key || ''], function (r) {
+        if (tok !== tfPoll) return; var b = $('tfScan'), st = r && r.state;
+        if (st && st.state === 'running') { $('tfMsg').textContent = 'Scanning prices… ' + Math.round((Date.now() - t0) / 1000) + 's. You can leave this page; it carries on.'; tfWatch(tok, t0); return; }
+        b.disabled = false;
+        if (st && st.state === 'error') { $('tfMsg').textContent = 'Scan failed: ' + st.msg; return; }
+        $('tfMsg').textContent = ''; TF = r; renderTf();
+      }, function (e) { if (tok === tfPoll) tfWatch(tok, t0); });
+    }, 4000);
+  }
   $('tfScan').addEventListener('click', function () {
-    var b = $('tfScan'); b.disabled = true; $('tfMsg').textContent = 'Scanning prices. This takes up to a minute…';
-    gs('tariffScan', [], function (r) { b.disabled = false; $('tfMsg').textContent = ''; TF = { scan: r, owner: true, postcode: TF ? TF.postcode : '' }; renderTf(); }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan failed: ' + e; });
+    var b = $('tfScan'); b.disabled = true; $('tfMsg').textContent = 'Starting the scan…'; var tok = ++tfPoll, t0 = Date.now(); window.__force = true;
+    gs('tariffScanStart', [], function (s) { tfWatch(tok, t0); }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan failed: ' + e; });
   });
   function pounds(p, sign) { var v = Math.abs(p) / 100; return (sign ? (p > 0 ? '+' : p < 0 ? '-' : '') : (p < 0 ? '-' : '')) + '£' + v.toFixed(2); }
   var TFMODE = 'own';
@@ -1286,7 +1299,9 @@
       'Expected cost over the next ' + hc + ' months: ' + pounds(cp[0]) + '.'
     ]);
     sect(ccard, 'Export: what you earn', [
-      cur.exportName + ' (the app assumes you export at these). Expected over ' + hc + ' months: ' + pounds(cp[1]) + '.',
+      cur.exportName + ' (the app assumes you export at these). Expected over ' + hc + ' months: ' + pounds(cp[1]) + (function () {
+        var kw = 0; (mdl.months || []).slice(0, Math.min(hc, 12)).forEach(function (m) { var p = m[0].split('-'); kw += m[2] * new Date(Date.UTC(+p[0], +p[1], 0)).getUTCDate(); });
+        if (hc > 12) kw = kw * hc / 12; return kw > 1 ? ', which is about ' + Math.round(kw) + ' kWh sold at roughly ' + fmt(cp[1] / kw, 1) + 'p each. Only the solar left after the house is counted, capped at 6 kWh a day.' : '.'; })(),
       'Export is not approved yet, so this is what you would earn once it is.'
     ]);
     sect(ccard, 'Net cost over ' + hc + ' months', ['Import ' + pounds(cp[0]) + ' less export ' + pounds(cp[1]) + ' = ' + pounds(cp[2]) + ' (about ' + pounds(cp[2] / hc) + ' a month).']);
