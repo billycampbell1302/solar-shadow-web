@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'bd7ed0ae26', u = new URL(location.href);
+    var id = 'a6afee00cb', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -222,14 +222,17 @@
     .sheet { background:var(--surface); border-radius:20px 20px 0 0; }
     .hero .num { font-size:40px; }
   }
+  .daybar.tfbar { flex-wrap:wrap; overflow:visible; row-gap:10px; }
+  .daybar.tfbar .btn { min-height:44px; padding:0 18px; white-space:nowrap; }
+  .daybar.tfbar label { flex:1 1 200px; }
   /* day picker: one tidy row  < date >  Today */
-  .daybar { display:grid !important; grid-template-columns:44px minmax(0,1fr) 44px auto; gap:8px; align-items:stretch; overflow:visible !important; padding:2px 0 4px !important; }
-  .daybar > * { flex:none; min-width:0; }
-  .daybar .dstep { font-size:26px; line-height:1; padding:0; min-height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
-  .daybar .dtoday { min-height:44px; border-radius:12px; padding:0 16px; font-weight:600; }
-  .daybar input[type=date] { min-height:44px !important; width:100%; box-sizing:border-box; text-align:center; font-size:16px; font-weight:600; border-radius:12px !important; -webkit-appearance:none; appearance:none; }
-  .daybar .sub { grid-column:1 / -1; min-height:0; }
-  .daybar .sub:empty { display:none; }
+  .daybar.daypick { display:grid !important; grid-template-columns:44px minmax(0,1fr) 44px auto; gap:8px; align-items:stretch; overflow:visible !important; padding:2px 0 4px !important; }
+  .daybar.daypick > * { flex:none; min-width:0; }
+  .daybar.daypick .dstep { font-size:26px; line-height:1; padding:0; min-height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+  .daybar.daypick .dtoday { min-height:44px; border-radius:12px; padding:0 16px; font-weight:600; }
+  .daybar.daypick input[type=date] { min-height:44px !important; width:100%; box-sizing:border-box; text-align:center; font-size:16px; font-weight:600; border-radius:12px !important; -webkit-appearance:none; appearance:none; }
+  .daybar.daypick .sub { grid-column:1 / -1; min-height:0; }
+  .daybar.daypick .sub:empty { display:none; }
   .daybar button:disabled { opacity:.35; }
   #dayNotes, #chToday, #chDayPow, #chDayPrice, #chDayGrid, #chDayBatt { transition:opacity .15s; }
   .dayloading #dayNotes, .dayloading #chToday, .dayloading #chDayPow, .dayloading #chDayPrice, .dayloading #chDayGrid, .dayloading #chDayBatt { opacity:.4; }
@@ -280,7 +283,7 @@
 
   <section aria-label="Today">
     <h2 id="todayH">Today so far</h2>
-    <div class="daybar" role="group" aria-label="Choose a day">
+    <div class="daybar daypick" role="group" aria-label="Choose a day">
       <button class="btn dstep" id="dayPrev" aria-label="Previous day">&lsaquo;</button>
       <input type="date" id="dayDate" aria-label="Day to show">
       <button class="btn dstep" id="dayNext" aria-label="Next day">&rsaquo;</button>
@@ -366,7 +369,7 @@
     <section aria-label="Tariffs">
       <h2>Tariff comparison</h2>
       <div class="sub">Your real half-hour grid purchases from recent days, priced again on every Octopus, EDF and E.ON Next deal open to new customers (time-of-use ones included) in your area, next to what the current deal cost. Read-only: it only looks at public prices.</div>
-      <div class="daybar"><button class="btn primary" id="tfScan" hidden>Scan deals now</button><label class="sub" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="tfOnlyOk" checked> Only deals we can actually get</label><span class="sub" id="tfMsg"></span></div>
+      <div class="daybar tfbar"><button class="btn primary" id="tfScan" hidden>Scan deals now</button><label class="sub" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="tfOnlyOk" checked> Only deals we can actually get</label><span class="sub" id="tfMsg"></span></div>
       <div id="tfOut"></div>
     </section>
   </div>
