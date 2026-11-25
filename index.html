@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '5604c991df', u = new URL(location.href);
+    var id = '9dae2d0ef9', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1985,7 +1985,7 @@
 <script>
 /* Section icons: a small badge before each card title, the same on every page */
 (function () {
-  var map = [[/car|tesla|charger/i, '🚗'], [/compare|against|versus/i, '⚖️'], [/reading|odometer|log/i, '📝'], [/battery|charge/i, '🔋'], [/solar|forecast|weather|sun/i, '☀️'], [/price|rate|cost|money|saved|saving|earn/i, '💷'], [/grid|bought|import|export/i, '⚡'], [/accura|quality|learn|score/i, '🎯'], [/plan|schedule|next/i, '🧭'], [/car|tesla|charger/i, '🚗'], [/heat|temperature|summerhouse|warm|cool/i, '🌡️'], [/setting|setup|share|link|key|tool|check/i, '⚙️'], [/health|activity|log|status|error/i, '🩺'], [/how|work|reading|about/i, '💡'], [/month|year|day|history|past|total|running/i, '📅']];
+  var map = [[/learn|adapt/i, '🎓'], [/load|plug|appliance/i, '🔌'], [/hours|last 48|recent/i, '🕒'], [/doing now|right now/i, '📍'], [/car|tesla|charger/i, '🚗'], [/compare|against|versus/i, '⚖️'], [/reading|odometer|log/i, '📝'], [/battery|charge/i, '🔋'], [/solar|forecast|weather|sun/i, '☀️'], [/price|\brate|cost|money|saved|saving|\bearn/i, '💷'], [/grid|bought|import|export/i, '⚡'], [/accura|quality|learn|score/i, '🎯'], [/plan|schedule|next/i, '🧭'], [/car|tesla|charger/i, '🚗'], [/heat|temperature|summerhouse|warm|cool/i, '🌡️'], [/setting|setup|share|link|key|tool|check/i, '⚙️'], [/health|activity|log|status|error/i, '🩺'], [/how|work|reading|about/i, '💡'], [/month|year|day|history|past|total|running/i, '📅']];
   function pick(t) { for (var i = 0; i < map.length; i++) if (map[i][0].test(t)) return map[i][1]; return '📌'; }
   function paint(root) {
     Array.prototype.forEach.call((root || document).querySelectorAll('#viewDash .card > h2, #viewLog .card > h2, #viewCar .card > h2, #viewSh .card > h2, #viewAct .card > h2, #viewBr .card > h2, #viewSetup .card > h2'), function (h) {
