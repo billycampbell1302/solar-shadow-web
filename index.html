@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '6675d0b080', u = new URL(location.href);
+    var id = 'abcfc10773', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1067,7 +1067,7 @@
     if (!(S.v >= 3)) { out.appendChild(el('div', { class: 'card', style: 'margin-top:10px;border-color:var(--ours)' }, 'This scan was made before the 12, 18 and 24 month comparison, the export pairing and the filter for deals we cannot get. ' + (TF.owner ? 'Press "Scan deals now" to get the full picture.' : 'The owner needs to scan again.'))); return; }
     var only = $('tfOnlyOk').checked, hz = S.horizons, cur = S.current, mdl = S.model, age = Math.round((Date.now() - S.made) / 3600e3);
     var all = S.tariffs.filter(function (t) { return !(only && t.blocked); }), left = S.tariffs.filter(function (t) { return t.blocked; });
-    var fixedOf = function (t) { return t.term > 0 && !/tracker|agile|half-hourly/i.test(t.kind); };
+    var fixedOf = function (t) { return t.term > 0 && !t.variable && !/tracker|agile|half-hourly/i.test(t.kind); };
     var hOf = function (t) { if (TFMODE === 'own') { if (fixedOf(t)) { var h = Math.min(36, Math.round(t.term)); return hz.indexOf(h) >= 0 ? h : 12; } return 12; } return +TFMODE; };
     var diffOf = function (t) { var h = hOf(t); return t.proj[h][2] - S.curProj[h][2]; };
     var rows = all.slice().sort(function (a, b) { return diffOf(a) / hOf(a) - diffOf(b) / hOf(b); });
@@ -1258,7 +1258,7 @@
       stat('Inside now', fmt(L.temp, 1) + '°C', 'Read ' + ago(L.ageMin));
       var fw = (S.forecast || [])[0];
       stat('Outside now', L.out === null ? '–' : fmt(L.out, 1) + '°C', fw ? 'Wind ' + fmt(fw[2], 1) + ' m/s' + (fw[4] !== null && fw[4] !== undefined ? ' from the ' + COMPASS[dirQuad(fw[4])] : '') + ' · sun ' + Math.round(fw[3] || 0) + ' W/m²' + (fw[5] ? ' · rain ' + fmt(fw[5], 1) + ' mm/h' : '') : '');
-      stat('Heater', L.heating ? 'Heating' : 'Not heating', L.power !== null ? Math.round(L.power) + ' W' : 'Judged from the on/off switch');
+      stat('Heater', L.heating === null ? 'Unknown' : L.heating ? 'Heating' : 'Not heating', L.power !== null ? Math.round(L.power) + ' W' : 'Not reported. Judged from the mode (Comfort, Antifrost) where known; Eco is unknown');
     } else stat('Inside now', '–', 'No readings yet. One is saved with each inverter read (every 10 minutes).');
     var ser = S.series || [], xs = ser.map(function (r) { return hhmm(r[0]); }), ticks = [], seen = {};
     ser.forEach(function (r, i) { var h = Number(hhmm(r[0]).slice(0, 2)), m = Number(hhmm(r[0]).slice(3)); var step = (window.innerWidth || 800) < 560 ? 12 : 6, bk = Math.floor(r[0] / (step * 3600e3)); if (h % step === 0 && m < 10 && !seen[bk]) { seen[bk] = 1; ticks.push(i); } });
