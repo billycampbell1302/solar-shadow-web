@@ -2,6 +2,17 @@
 <html lang="en-GB">
 <head>
 <meta charset="utf-8">
+<script>
+(function () {
+  try {
+    var id = 'bd7ed0ae26', u = new URL(location.href);
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
+      u.searchParams.set('_v', j.id); location.replace(u.toString());
+    }).catch(function () {});
+  } catch (e) {}
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -713,6 +724,17 @@
     if (P.canFill) warn.push('Press "Load past days from Solis" in Setup to fill the missing part.');
     if (P.forecastCoverage !== undefined && !P.oursReliable) warn.push('We did not save forecasts for all of this day, so the "ours" line is only approximate.');
     if (warn.length) { notes.textContent = warn.join(' '); if (P.coverage < 0.95) notes.className = 'daynote warn'; }
+    if (P.coverage < 0.95 && (window.__ACCESS__ || { owner: true }).owner) {
+      var rb = el('button', { class: 'btn sm', type: 'button', style: 'display:block;margin-top:8px' }, 'Re-check this day');
+      rb.addEventListener('click', function () {
+        rb.disabled = true; rb.textContent = 'Re-checking…';
+        gs('recheckDay', [dayKey(), P.date], function (np) {
+          try { var ks = [P.date]; if (np.date === np.maxDate) ks.push(''); ks.forEach(function (k) { localStorage.setItem('c:getDay:' + JSON.stringify([dayKey(), k]), JSON.stringify({ t: Date.now(), r: np })); }); } catch (e) {}
+          dayPack = np; renderDay(); $('dayMsg').textContent = np.recheck || '';
+        }, function (m) { rb.disabled = false; rb.textContent = 'Re-check this day'; $('dayMsg').textContent = 'Could not re-check: ' + m; });
+      });
+      notes.appendChild(rb);
+    }
     var LV = P.live, lc = $('liveCard'); clear(lc); lc.hidden = !LV;
     if (LV) {
       var pf = function (p) { return pounds(p); };
@@ -893,7 +915,7 @@
       var ck = null, shown = false;
       if (/^get(Dashboard|Day|Tariffs|Cars|Activity|Brain|Summerhouse)$/.test(fn)) {
         ck = 'c:' + fn + ':' + JSON.stringify(args);
-        var fresh = false; try { var raw = localStorage.getItem(ck); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r !== undefined) { shown = true; fresh = fn === 'getDay' && !!args[1] && Date.now() - cv.t < 600e3; setTimeout(function () { ok(cv.r); }, 0); } } } catch (e) {}
+        var fresh = false; try { var raw = localStorage.getItem(ck); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r !== undefined) { shown = true; fresh = fn === 'getDay' && Date.now() - cv.t < (args[1] ? 600e3 : 30e3); setTimeout(function () { ok(cv.r); }, 0); } } } catch (e) {}
         if (fresh && !window.__force) return; // a finished day we fetched in the last 10 minutes: no need to ask the server again
         var ok0 = ok, bad0 = bad;
         ok = function (r) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), r: r })); } catch (e) {} ok0(r); };
@@ -1310,7 +1332,7 @@
     $('tariff').textContent = d.tariff || '–';
     $('fresh').textContent = d.live ? (window.matchMedia && matchMedia('(max-width:470px)').matches ? '' : 'Updated ') + ago(d.live.ageMin) : 'No readings yet';
     $('exportState').textContent = d.exportEnabled ? 'on' : 'off';
-    renderHero(); renderKpis(); renderToday(); if (!dayPack || !selDate) loadDay(selDate); else renderDay(); renderPlan(); renderHistory(); renderLog(); renderForecast(); renderQuality(); renderLearn();
+    renderHero(); renderKpis(); renderToday(); if (!dayPack || !selDate) { if (!window.__noDay) loadDay(selDate); } else renderDay(); renderPlan(); renderHistory(); renderLog(); renderForecast(); renderQuality(); renderLearn();
     $('foot').textContent = 'Generated ' + new Intl.DateTimeFormat('en-GB', { timeZone: TZ, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(d.generated)) + '. Refreshes every 5 minutes.';
   }
   // loading bar: counts requests to the server that the person is waiting on (background prefetching is quiet)
@@ -1334,7 +1356,16 @@
   function fail(e) { $('main').classList.remove('loading'); clear($('banners')); banner('', '×', 'Could not load the data: ' + (e && e.message ? e.message : e)); }
   function load() {
     $('main').classList.add('loading');
-    if ((window.google && google.script && google.script.run) || (window.__API__ && window.__API__.url)) gs('getDashboard', [(window.__ACCESS__ || {}).key || ''], function (d) { render(d); prefetchTabs(); }, fail);
+    if (window.google && google.script && google.script.run) gs('getDashboard', [(window.__ACCESS__ || {}).key || ''], function (d) { render(d); prefetchTabs(); }, fail);
+    else if (window.__API__ && window.__API__.url) {
+      // Phone site: one request brings the dashboard and today's picture together; the last answer is shown straight away.
+      var k = (window.__ACCESS__ || {}).key || '', dk = 'c:getDashboard:' + JSON.stringify([k]), shown = false;
+      try { var raw = localStorage.getItem(dk); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r) { shown = true; window.__noDay = true; try { render(cv.r); } finally { window.__noDay = false; } } } } catch (e) {}
+      gs('getBoot', [k], function (b) {
+        try { localStorage.setItem(dk, JSON.stringify({ t: Date.now(), r: b.dash })); localStorage.setItem('c:getDay:' + JSON.stringify([k, '']), JSON.stringify({ t: Date.now(), r: b.day })); } catch (e) {}
+        render(b.dash); prefetchTabs();
+      }, function (m) { if (!shown) fail(m); });
+    }
     else if (window.__DASH__) render(window.__DASH__);
     else fail('no data source');
   }
