@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'eca9dd0e47', u = new URL(location.href);
+    var id = '8acd4f35e7', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1151,6 +1151,8 @@
       hd.appendChild(el('div', { class: 'sub' }, 'The short answer'));
       hd.appendChild(el('div', { style: 'font-size:20px;font-weight:650;margin:2px 0' }, save > 0.5 ? best.name + ' would be about ' + pounds(save) + ' a month cheaper than ' + cur.name + '.' : cur.name + ' is already the cheapest we can get.'));
       hd.appendChild(el('div', { class: 'sub' }, iog ? 'Intelligent Octopus Go: ' + (perM(iog) < -0.5 ? 'about ' + pounds(-perM(iog)) + ' a month cheaper' : perM(iog) > 0.5 ? 'about ' + pounds(perM(iog)) + ' a month dearer' : 'about the same') + ' than ' + cur.name + ', with the cars included. ' + (rows.indexOf(iog) === 0 ? 'It is the best deal.' : 'It is number ' + (rows.indexOf(iog) + 1) + ' of ' + rows.length + '.') : 'Intelligent Octopus Go is not in this scan yet. Press Scan deals now.'));
+      var same = rows.filter(function (t) { return !cur.fromOctopus && /\bgo\b/i.test(t.name || '') && !/intelligent|fixed|flex|faster|12m|ev/i.test(t.name || '') && !t.blocked; })[0];
+      if (same && /\bgo\b/i.test(cur.name) && Math.abs(perM(same)) > 0.5) hd.appendChild(el('div', { class: 'sub', style: 'color:var(--ours);margin-top:6px' }, 'Check this: "' + same.name + '" is the same product as your current ' + cur.name + ' but prices ' + pounds(Math.abs(perM(same))) + ' a month ' + (perM(same) < 0 ? 'cheaper' : 'dearer') + '. Octopus publishes it at ' + fmt(same.lowP, 1) + 'p cheap rate, ' + fmt(same.highP, 1) + 'p day rate and ' + fmt(same.standingP, 1) + 'p a day standing charge; the settings file has ' + (cur.rates ? fmt(cur.rates.night, 1) + 'p, ' + fmt(cur.rates.day, 1) + 'p and ' + fmt(cur.rates.standing, 1) + 'p' : 'other figures') + '. One of them is out of date, so treat the ranking with care until they match.'));
       hd.appendChild(el('div', { class: 'sub' }, 'Based on ' + (hc0 > 0 ? 'the next ' + hc0 + ' months' : 'a year') + ' of your real usage' + (mdl && mdl.car ? ' plus the cars' : '') + '. Details below.'));
       out.appendChild(hd);
     })();
@@ -1187,7 +1189,7 @@
       c.appendChild(s);
     }
     var ccard = el('div', { class: 'card', style: 'margin-top:10px' });
-    ccard.appendChild(el('div', { class: 'sub' }, 'YOUR CURRENT TARIFF (what everything below is compared with)' + (cur.fromOctopus ? ' · read from your Octopus account' + (cur.tariffCode ? ' (' + cur.tariffCode + ')' : '') : ' · typed in the settings file: add the Octopus key and MPAN in Setup to read it automatically')));
+    ccard.appendChild(el('div', { class: 'sub' }, 'YOUR CURRENT TARIFF (what everything below is compared with)' + (cur.fromOctopus ? ' · read from your Octopus account' + (cur.tariffCode ? ' (' + cur.tariffCode + ')' : '') : ' · typed in the settings file. ' + (cur.liveError ? 'Reading it from Octopus failed: ' + cur.liveError : 'Press Scan deals now to read it from Octopus.'))));
     ccard.appendChild(el('div', { style: 'font-size:17px;font-weight:650;margin:2px 0' }, cur.name));
     sect(ccard, 'Import: what you pay', [
       cr ? 'Cheap rate ' + fmt(cr.night, 2) + 'p per kWh from ' + cr.from + ' to ' + cr.to + ', day rate ' + fmt(cr.day, 2) + 'p per kWh' + (cr.standing ? ', standing charge ' + fmt(cr.standing, 1) + 'p a day.' : '.') : 'Rates not set in Config.',
