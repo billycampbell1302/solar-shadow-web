@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'e1c86bd837', u = new URL(location.href);
+    var id = '04a88fa4a6', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -356,6 +356,18 @@
   #viewSetup section:first-child > h2 { font-size:20px; text-transform:none; letter-spacing:0; color:var(--ink); font-weight:650; margin:14px 0 2px; }
   #viewSetup section > .sub { margin-bottom:6px; }
   ul.q li { padding:8px 0; }
+
+  /* Setup status: compact chips, errors small, old warnings folded away */
+  .statchips { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 8px; }
+  .chip { font-size:13px; padding:4px 10px; border-radius:99px; background:var(--chip); color:var(--ink2); }
+  .chip.good { background:var(--good-bg); color:var(--ink); } .chip.na { color:var(--muted); }
+  #setupStatus { display:block !important; }
+  #setupStatus li { padding:6px 0 !important; font-size:13.5px; } #setupStatus li b { font-size:13.5px; font-weight:600; } #setupStatus li .d { font-size:12px !important; }
+  #setupStatus li .ic { width:18px; height:18px; font-size:11px; }
+  details.recent { font-size:12px; color:var(--muted); } details.recent summary { cursor:pointer; padding:2px 0; font-size:13px; }
+  details.recent.live summary { color:var(--ink); font-weight:600; }
+  details.recent .rl { padding:3px 0; border-top:1px solid var(--grid); word-break:break-word; line-height:1.35; }
+  #setupStatus li.wide { display:block; border:0; padding-top:2px !important; }
 </style>
 </head>
 <body>
@@ -1043,6 +1055,12 @@
   function renderSetup(st) {
     S = st; var list = $('setupStatus'); clear(list);
     function li(state, title, detail) { var l = el('li'), ic = el('span', { class: 'ic ' + state }, state === 'good' ? '✓' : state === 'warn' ? '!' : state === 'crit' ? '×' : '–'); ic.setAttribute('aria-hidden', 'true'); l.appendChild(ic); var d = el('div'); d.appendChild(el('b', null, title)); d.appendChild(el('span', { class: 'd' }, detail)); l.appendChild(d); list.appendChild(l); return l; }
+    var chips = $('statChips'); if (!chips) { chips = el('div', { id: 'statChips', class: 'statchips' }); list.parentNode.insertBefore(chips, list); } clear(chips);
+    var li0 = li, shortOf = { 'Latest reading': 1, 'Schedule': 1 };
+    li = function (state, title, detail) {
+      if (state === 'good' || state === 'na') { var ch = el('span', { class: 'chip ' + state, title: detail }, (state === 'good' ? '✓ ' : '– ') + title + (state === 'good' && shortOf[title] ? ' · ' + String(detail).replace(/^Running \((\d+) timers\)\.$/, '$1 timers').replace(/\.$/, '') : '')); chips.appendChild(ch); return; }
+      li0(state, title, detail);
+    };
     var set = {}; st.items.forEach(function (i) { set[i.name] = i.isSet; });
     li(set.SOLIS_KEY_ID && set.SOLIS_KEY_SECRET ? 'good' : 'crit', 'Solis keys', set.SOLIS_KEY_ID && set.SOLIS_KEY_SECRET ? 'Saved.' : 'Not saved yet. Needs the API approval from Solis first.');
     li(set.SOLIS_INVERTER_SN ? 'good' : 'warn', 'Inverter serial', set.SOLIS_INVERTER_SN ? 'Saved.' : 'Run Test Solis below; it will find it.');
@@ -1052,7 +1070,23 @@
     li(set.SOLCAST_API_KEY && set.SOLCAST_SITE_IDS ? 'good' : 'na', 'Solcast', set.SOLCAST_API_KEY && set.SOLCAST_SITE_IDS ? 'Set up.' : 'Optional. Not set up.');
     li(set.GITHUB_TOKEN && set.GITHUB_REPO ? 'good' : 'na', 'Predbat replay', set.GITHUB_TOKEN && set.GITHUB_REPO ? 'Set up.' : 'Optional. Not set up.');
     li(set.OCTOPUS_API_KEY && set.OCTOPUS_MPAN && set.OCTOPUS_METER_SERIAL ? 'good' : 'na', 'Octopus meter check', set.OCTOPUS_API_KEY && set.OCTOPUS_MPAN && set.OCTOPUS_METER_SERIAL ? 'Set up.' : 'Optional. Not set up.');
-    (st.recent || []).forEach(function (r) { li(r.recovered ? 'warn' : (r.level === 'ERROR' ? 'crit' : 'warn'), 'Recent ' + r.level.toLowerCase() + (r.recovered ? ' (a reading has worked since)' : ''), hhmm(r.time) + ' ' + r.msg); });
+    li = li0;
+    (function () {
+      var rec = st.recent || [], groups = {}, order = [];
+      rec.forEach(function (r) { var k = r.level + '|' + String(r.msg).replace(/\d+ min ago|\d+ minutes?/g, 'N'); if (!groups[k]) { groups[k] = { r: r, n: 0, recovered: r.recovered }; order.push(k); } groups[k].n++; if (!r.recovered) groups[k].recovered = false; });
+      var live = order.filter(function (k) { return !groups[k].recovered; });
+      if (live.length) {
+        var dl = el('details', { class: 'recent live', open: 'open' }); dl.appendChild(el('summary', null, '! Needs attention (' + live.length + ')'));
+        live.forEach(function (k) { var g = groups[k]; dl.appendChild(el('div', { class: 'rl' }, (g.r.level === 'ERROR' ? '× ' : '') + hhmm(g.r.time) + '  ' + g.r.msg + (g.n > 1 ? '  (x' + g.n + ')' : ''))); });
+        var l3 = el('li', { class: 'wide' }); l3.appendChild(el('span')); l3.appendChild(dl); list.appendChild(l3);
+      }
+      var old = order.filter(function (k) { return groups[k].recovered; });
+      if (old.length) {
+        var dt = el('details', { class: 'recent' }); dt.appendChild(el('summary', null, 'Earlier warnings, since fixed (' + old.length + ')'));
+        old.forEach(function (k) { var g = groups[k]; dt.appendChild(el('div', { class: 'rl' }, hhmm(g.r.time) + '  ' + g.r.msg + (g.n > 1 ? '  (x' + g.n + ')' : ''))); });
+        var l2 = el('li', { class: 'wide' }); l2.appendChild(el('span')); l2.appendChild(dt); list.appendChild(l2);
+      }
+    })();
     // actions
     var ac = $('actions'); clear(ac);
     var byName = {}; st.actions.forEach(function (a) { byName[a.name] = a; });
