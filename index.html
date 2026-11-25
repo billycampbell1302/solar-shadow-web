@@ -232,6 +232,10 @@
   @keyframes busyspin { to { transform:rotate(360deg); } }
   @media (prefers-reduced-motion: reduce) { .busy::before, .ptr.spin::before { animation-duration:2.5s; } }
   .stbar { position:fixed; top:0; left:0; right:0; height:var(--st); background:var(--page); z-index:65; pointer-events:none; }
+  .pill.ver { cursor:pointer; }
+  .pill.ver.ok { border-color:var(--perfect); color:var(--ink); }
+  .pill.ver.pend { border-color:#e8a317; color:var(--ink); }
+  #verNote { margin:6px 0 0; }
 </style>
 </head>
 <body>
@@ -241,7 +245,9 @@
     <span class="pill lock" title="Nothing on this page, or in this software, sends anything to the inverter">Read-only</span>
     <span class="pill" id="tariff">–</span>
     <span class="pill" id="fresh">Loading…</span>
+    <span class="pill ver" id="verPill" role="button" tabindex="0" hidden>Version…</span>
   </header>
+  <div class="sub" id="verNote" hidden></div>
   <nav class="tabs" role="tablist"><button role="tab" id="tabDash" aria-selected="true">Dashboard</button><button role="tab" id="tabLog" aria-selected="false">Daily log</button><button role="tab" id="tabAct" aria-selected="false">Activity</button><button role="tab" id="tabBr" aria-selected="false">Our software</button><button role="tab" id="tabTf" aria-selected="false">Tariffs</button><button role="tab" id="tabCar" aria-selected="false">Cars</button><button role="tab" id="tabSh" aria-selected="false">Summerhouse</button><button role="tab" id="tabSetup" aria-selected="false">Setup</button></nav>
   <details class="about"><summary>About this page</summary><div class="sub">Solis AI keeps running the battery exactly as it is set up. Our software plans as if it were in charge, and each day we compare the two on the same real solar, house use and prices.</div></details>
   <div id="banners"></div>
@@ -907,16 +913,6 @@
     li(set.SOLIS_KEY_ID && set.SOLIS_KEY_SECRET ? 'good' : 'crit', 'Solis keys', set.SOLIS_KEY_ID && set.SOLIS_KEY_SECRET ? 'Saved.' : 'Not saved yet. Needs the API approval from Solis first.');
     li(set.SOLIS_INVERTER_SN ? 'good' : 'warn', 'Inverter serial', set.SOLIS_INVERTER_SN ? 'Saved.' : 'Run Test Solis below; it will find it.');
     li(st.triggers >= st.triggersExpected ? 'good' : 'warn', 'Schedule', st.triggers >= st.triggersExpected ? 'Running (' + st.triggers + ' timers).' : 'Not started (' + st.triggers + ' of ' + st.triggersExpected + ' timers). Press "Start the schedule" once the readings test works.');
-    var verLi = li('warn', 'App version', 'Checking…');
-    gs('getAppVersion', [], function (v) {
-      var ic = verLi.querySelector('.ic'), d = verLi.querySelector('div'); if (!ic || !d) return;
-      var st2 = v.state === 'current' ? 'good' : v.state === 'pending' ? 'warn' : 'warn';
-      ic.className = 'ic ' + st2; ic.textContent = v.state === 'current' ? '✓' : '!';
-      var txt = v.state === 'current' ? 'Running version ' + v.live + ' (built ' + v.liveTime + ').'
-        : v.state === 'pending' ? 'Running ' + v.live + ' (built ' + v.liveTime + '); newer code on GitHub is ' + v.latest + (v.latestTime ? ' (built ' + v.latestTime + ')' : '') + '. In Apps Script: Deploy, Manage deployments, Edit, New version, Deploy.'
-        : (v.note || 'Could not tell.') + ' Running version ' + v.live + '.';
-      d.querySelector('b').textContent = v.state === 'current' ? 'App version: up to date' : v.state === 'pending' ? 'App version: update pending' : 'App version'; d.querySelector('.d').textContent = ' ' + txt;
-    }, function (e) { var d = verLi.querySelector('div'); if (d) d.querySelector('.d').textContent = ' Could not check (' + e + ')'; });
     var age = st.lastReadingMs ? (Date.now() - st.lastReadingMs) / 60000 : null;
     li(age === null ? 'na' : age < 30 ? 'good' : 'crit', 'Latest reading', age === null ? 'None yet.' : ago(age) + '.');
     li(set.SOLCAST_API_KEY && set.SOLCAST_SITE_IDS ? 'good' : 'na', 'Solcast', set.SOLCAST_API_KEY && set.SOLCAST_SITE_IDS ? 'Set up.' : 'Optional. Not set up.');
@@ -1354,6 +1350,25 @@
     document.addEventListener('touchmove', function (e) { if (y0 === null) return; dy = e.touches[0].clientY - y0; if (dy > 20) { bar.textContent = dy > 80 ? 'Release to refresh' : 'Pull down to refresh'; bar.classList.add('on'); } else bar.classList.remove('on'); }, { passive: true });
     document.addEventListener('touchend', function () { if (y0 !== null && dy > 80) { bar.textContent = 'Refreshing…'; bar.classList.add('on', 'spin'); window.__force = true; try { refreshCurrent(); } finally { window.__force = false; } var waited = 0, iv = setInterval(function () { waited += 300; if ((waited >= 600 && busyN === 0) || waited > 20000) { clearInterval(iv); bar.classList.remove('on', 'spin'); } }, 300); } else bar.classList.remove('on'); y0 = null; dy = 0; }, { passive: true });
   })();
+  // App version pill (owner only): is the running code the newest on GitHub?
+  var verTxt = '';
+  function checkVersion() {
+    if (!(window.__ACCESS__ || { owner: true }).owner) return;
+    var pill = $('verPill'); if (!pill) return;
+    window.__quiet = true;
+    try {
+      gs('getAppVersion', [], function (v) {
+        pill.hidden = false; pill.className = 'pill ver ' + (v.state === 'current' ? 'ok' : v.state === 'pending' ? 'pend' : '');
+        pill.textContent = v.state === 'current' ? 'Up to date' : v.state === 'pending' ? 'Update pending' : 'Version unknown';
+        verTxt = v.state === 'current' ? 'Running version ' + v.live + ' (built ' + v.liveTime + '). It is the newest code on GitHub.'
+          : v.state === 'pending' ? 'Running ' + v.live + ' (built ' + v.liveTime + '); newer code on GitHub is ' + v.latest + (v.latestTime ? ' (built ' + v.latestTime + ')' : '') + '. In Apps Script: Deploy, Manage deployments, Edit, New version, Deploy.'
+          : (v.note || 'Could not tell.') + ' Running version ' + v.live + '.';
+      }, function (e) { pill.hidden = false; pill.className = 'pill ver'; pill.textContent = 'Version unknown'; verTxt = 'Could not check: ' + e; });
+    } finally { window.__quiet = false; }
+  }
+  $('verPill').addEventListener('click', function () { var n = $('verNote'); n.textContent = verTxt; n.hidden = !n.hidden; });
+  $('verPill').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('verPill').click(); } });
+  setTimeout(checkVersion, 2500); setInterval(checkVersion, 30 * 60 * 1000);
   load(); setInterval(load, 5 * 60 * 1000);
 })();
 </script>
