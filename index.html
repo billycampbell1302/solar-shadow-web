@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'f79ebca776', u = new URL(location.href);
+    var id = 'b0676615fd', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -382,6 +382,44 @@
   .tfkv{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 16px;margin-top:8px}
   .tfkv1{font-size:13.5px;line-height:1.35}
   .tfctl .daybar{margin:4px 0}.tfcl{min-width:150px}
+
+  /* Tariffs page polish */
+  #viewTf .tfcard { padding:16px 18px 14px; border-radius:18px; }
+  #viewTf .tfh { display:flex; align-items:center; gap:9px; font-size:16px; font-weight:650; letter-spacing:0; text-transform:none; margin:0 0 4px; color:var(--ink); }
+  #viewTf .tfi { display:inline-flex; width:28px; height:28px; align-items:center; justify-content:center; border-radius:9px; background:color-mix(in srgb, var(--accent) 14%, transparent); font-size:15px; }
+  #viewTf .tfhero { padding:20px 22px; border-radius:20px; border:1px solid color-mix(in srgb, var(--accent) 35%, var(--border)); background:linear-gradient(160deg, color-mix(in srgb, var(--accent) 12%, var(--surface)) 0%, var(--surface) 70%); }
+  #viewTf .tfbig { font-size:34px; font-weight:750; letter-spacing:-.02em; margin:4px 0 2px; }
+  #viewTf .tfl { font-size:11.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+  #viewTf .tftiles { gap:10px; margin-top:16px; }
+  #viewTf .tftile { background:var(--surface); border-radius:14px; padding:12px 14px; box-shadow:var(--shadow); }
+  #viewTf .tftile .tfl { font-size:11px; }
+  #viewTf .tfn { font-size:14.5px; margin:4px 0 2px; }
+  #viewTf .tfv { font-size:19px; letter-spacing:-.01em; }
+  #viewTf .tfs { margin-top:2px; }
+  #viewTf .tfctl { padding:10px 14px; border-radius:16px; }
+  #viewTf .tfctl .daybar { margin:6px 0; align-items:center; }
+  #viewTf .tfctl .btn.sm { border-radius:999px; padding:5px 13px; font-size:13px; }
+  #viewTf .btn.primary, #viewTf #tfScan { background:var(--accent); border-color:var(--accent); color:#fff; border-radius:12px; }
+  #viewTf .tfctl .btn.sm.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #viewTf .tfcl { min-width:140px; font-weight:600; color:var(--ink2); }
+  #viewTf .tft { margin-top:10px; }
+  #viewTf .tft table { border-collapse:separate; border-spacing:0; }
+  #viewTf .tft th { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--border); white-space:normal; min-width:0; }
+  #viewTf .tft td { padding:10px 10px; border-bottom:1px solid color-mix(in srgb, var(--grid) 60%, transparent); }
+  #viewTf .tft td:first-child { font-weight:600; }
+  #viewTf .tft tbody tr:nth-child(even) td { background:color-mix(in srgb, var(--ink) 2.5%, transparent); }
+  #viewTf .tft tbody tr:hover td { background:color-mix(in srgb, var(--accent) 7%, transparent); }
+  #viewTf .tftcur tbody tr:first-child td { background:color-mix(in srgb, var(--accent) 11%, transparent); border-bottom:1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  #viewTf .tftcur tbody tr:nth-child(2) td:first-child { box-shadow:inset 3px 0 0 var(--good, #2f9e6b); }
+  #viewTf .tftpair td:first-child { color:var(--ink2); font-weight:500; }
+  #viewTf .tftpair tbody tr:nth-child(2n) td { background:transparent; }
+  #viewTf .tftpair td:last-child { font-weight:650; }
+  #viewTf .tfkv { gap:14px 22px; margin-top:12px; }
+  #viewTf .tfk { padding:10px 12px; border-radius:12px; background:color-mix(in srgb, var(--ink) 3%, transparent); }
+  #viewTf .tfkv1 { font-weight:550; margin-top:2px; }
+  #viewTf details.setgrp { border-radius:16px; }
+  #viewTf .bars .row { padding:6px 0; }
+  @media (max-width:560px) { #viewTf .tfbig { font-size:28px; } #viewTf .tfhero { padding:16px; } #viewTf .tfcard { padding:14px; } #viewTf .tfcl { min-width:100%; } }
 </style>
 </head>
 <body>
@@ -1229,6 +1267,7 @@
   });
   function pounds(p, sign) { var v = Math.abs(p) / 100; return (sign ? (p > 0 ? '+' : p < 0 ? '-' : '') : (p < 0 ? '-' : '')) + '£' + v.toFixed(2); }
   var TFMODE = 'own';
+  function tfHead(icon, text) { var h = el('h2', { class: 'tfh' }); h.appendChild(el('span', { class: 'tfi' }, icon)); h.appendChild(document.createTextNode(text)); return h; }
   function renderTf() {
     var out = $('tfOut'); clear(out); if (!TF) return;
     $('tfScan').hidden = !TF.owner;
@@ -1277,7 +1316,7 @@
       t.appendChild(el('div', { class: 'tfv ' + (good ? 'pos' : '') }, money)); if (note) t.appendChild(el('div', { class: 'tfs' }, note)); host.appendChild(t);
     };
     var mo = function (v) { return (v >= 0 ? '+' : '-') + pounds(Math.abs(v)) + ' / month'; };
-    var hd = el('div', { class: 'card headline', style: 'margin-top:10px' });
+    var hd = el('div', { class: 'card headline tfhero', style: 'margin-top:10px' });
     hd.appendChild(el('div', { class: 'tfl' }, 'Best result over ' + hB + ' months, against ' + cur.name));
     hd.appendChild(el('div', { class: 'tfbig' }, -dB / hB > 0.5 ? 'Save ' + pounds(-dB / hB) + ' a month' : 'Stay on ' + cur.name));
     hd.appendChild(el('div', { class: 'tfs' }, -dB / hB > 0.5 ? best.name + ' with ' + (exName(best, hB) || 'no export deal') + ' (' + pounds(-dB) + ' over ' + hB + ' months)' : 'Nothing we can get beats it'));
@@ -1301,8 +1340,8 @@
     out.appendChild(ctl);
 
     // ---- 2. import deals ----
-    var ic = el('div', { class: 'card', style: 'margin-top:10px' }), is = el('div', { class: 'scroll' });
-    ic.appendChild(el('h2', { style: 'font-size:15px' }, 'Import deals'));
+    var ic = el('div', { class: 'card tfcard', style: 'margin-top:10px' }), is = el('div', { class: 'scroll tft tftcur' });
+    ic.appendChild(tfHead('⚡', 'Import deals'));
     ic.appendChild(el('div', { class: 'tfs' }, 'What your real half-hour grid purchases would cost. Cost is over the months shown; the last column is against your current deal.')); ic.appendChild(is);
     var curRates = cr ? fmt(cr.night, 1) + 'p night · ' + fmt(cr.day, 1) + 'p day' : 'not set';
     var irows = [['Your current: ' + cur.name, 'Variable', curRates, fmt(cr && cr.standing, 1), hc + '', pounds(cp[0]), '–']];
@@ -1311,8 +1350,8 @@
     out.appendChild(ic);
 
     // ---- 3. export deals ----
-    var ec = el('div', { class: 'card', style: 'margin-top:10px' }), es = el('div', { class: 'scroll' });
-    ec.appendChild(el('h2', { style: 'font-size:15px' }, 'Export deals'));
+    var ec = el('div', { class: 'card tfcard', style: 'margin-top:10px' }), es = el('div', { class: 'scroll tft tftcur' });
+    ec.appendChild(tfHead('☀️', 'Export deals'));
     var kwS = 0, kwA = 0; (mdl.months || []).slice(0, Math.min(hc, 12)).forEach(function (m) { var p = m[0].split('-'), dd = new Date(Date.UTC(+p[0], +p[1], 0)).getUTCDate(); kwS += m[2] * dd; kwA += (m[6] || 0) * dd; }); if (hc > 12) { kwS = kwS * hc / 12; kwA = kwA * hc / 12; }
     ec.appendChild(el('div', { class: 'tfs' }, 'Income over ' + hc + ' months from about ' + Math.round(kwS) + ' kWh of spare solar and ' + Math.round(kwA) + ' kWh of battery selling at the evening peak. Limit ' + (mdl.cap || '–') + ' kWh a day. ' + (S.exportMode === 'estimated' ? 'Export is not approved yet, so this is modelled.' : 'Based on real exports.'))); ec.appendChild(es);
     var erows = [['Your current: ' + (cur.exportName || 'none'), '', '', '', pounds(cp[1]), '–']];
@@ -1321,8 +1360,8 @@
     out.appendChild(ec);
 
     // ---- 4. best pair against current, line by line ----
-    var pc = el('div', { class: 'card', style: 'margin-top:10px' }), ps = el('div', { class: 'scroll' });
-    pc.appendChild(el('h2', { style: 'font-size:15px' }, 'Best pair against your current deal, over ' + hB + ' months')); pc.appendChild(ps);
+    var pc = el('div', { class: 'card tfcard', style: 'margin-top:10px' }), ps = el('div', { class: 'scroll tft tftpair' });
+    pc.appendChild(tfHead('⚖️', 'Best pair against your current deal, ' + hB + ' months')); pc.appendChild(ps);
     var abP = pB[6] || 0;
     table(ps, ['', 'Your current', 'Best pair'], [
       ['Import deal', cur.name, best.name],
@@ -1354,11 +1393,11 @@
       ['Deals priced', srcTxt || '–'],
       ['Scanned', (age2 < 60 ? age2 + ' min' : Math.round(age2 / 60) + ' h') + ' ago' + (S.seconds ? ', took ' + S.seconds + 's' : '') + (S.build ? ', build ' + S.build : '')]
     ];
-    var bc = el('div', { class: 'card', style: 'margin-top:10px' }); bc.appendChild(el('h2', { style: 'font-size:15px' }, 'What this scan is based on'));
+    var bc = el('div', { class: 'card tfcard', style: 'margin-top:10px' }); bc.appendChild(tfHead('🔎', 'What this scan is based on'));
     var kg = el('div', { class: 'tfkv' }); kv.forEach(function (r) { var d = el('div', { class: 'tfk' }); d.appendChild(el('div', { class: 'tfl' }, r[0])); d.appendChild(el('div', { class: 'tfkv1' }, r[1])); kg.appendChild(d); }); bc.appendChild(kg);
     out.appendChild(bc);
-    var oc = el('div', { class: 'card', style: 'margin-top:10px' }), os = el('div', { class: 'scroll' });
-    oc.appendChild(el('h2', { style: 'font-size:15px' }, 'Predicted price change, next 12 months'));
+    var oc = el('div', { class: 'card tfcard', style: 'margin-top:10px' }), os = el('div', { class: 'scroll tft' });
+    oc.appendChild(tfHead('📈', 'Predicted price change, next 12 months'));
     var ol = rawS.outlook, ck = rawS.curKnown || [];
     oc.appendChild(el('div', { class: 'tfs' }, 'Variable and market deals move with the price cap; fixed deals hold until their term ends.' + (SC !== 'base' ? ' Showing the what-if you picked, which replaces the forecast.' : ck.length ? ' ' + cur.name + ' already has a rise published by Octopus (' + ck.map(function (k) { return monthName(k.ym) + ' ' + (k.ratio >= 1 ? '+' : '') + fmt((k.ratio - 1) * 100, 1) + '%'; }).join(', ') + '), so those published prices are used rather than the forecast, and only forecast changes after that date are added.' : ' Octopus has not published a change for ' + cur.name + ' yet, so the cap forecast is used.')));
     if (ol && ol.rows && ol.rows.length && SC === 'base') ol.rows.forEach(function (r) { oc.appendChild(el('div', { class: 'tfs', style: 'margin-top:2px' }, monthName(r.ym) + ': ' + (r.pct >= 0 ? '+' : '') + fmt(r.pct, 1) + '% against today. ' + r.note.replace(/^Auto: /, ''))); });
@@ -1374,9 +1413,9 @@
     }
 
     // saving per month, every deal on its own basis
-    var top = rows.slice(0, 12), items = top.map(function (t) { var h = hOf(t); return { name: t.name, sub: typeOf(t) + ' · ' + t.kind + ' · over ' + h + ' months', v: -diffOf(t) / h, c: t.manual ? 'var(--predbat)' : t.other ? 'var(--perfect)' : 'var(--solis)' }; });
+    var top = rows.slice(0, 12), items = top.map(function (t) { var h = hOf(t); return { name: t.name, sub: (fixedOf(t) ? 'Fixed ' + t.term + ' months' : 'Variable') + ' · ' + h + ' months', v: -diffOf(t) / h, c: t.manual ? 'var(--predbat)' : t.other ? 'var(--perfect)' : 'var(--solis)' }; });
     var mx = Math.max.apply(null, items.map(function (i) { return Math.abs(i.v); }).concat([1]));
-    var c2 = el('div', { class: 'card', style: 'margin-top:10px' }); c2.appendChild(el('h2', { style: 'font-size:14px' }, 'Best pairs, per month against ' + cur.name));
+    var c2 = el('div', { class: 'card tfcard', style: 'margin-top:10px' }); c2.appendChild(tfHead('🏆', 'Best pairs, per month against ' + cur.name));
     var bars = el('div', { class: 'bars' });
     items.forEach(function (it) {
       var row = el('div', { class: 'row' }), nm = el('div', { class: 'name' }, it.name); nm.appendChild(el('small', null, it.sub));
