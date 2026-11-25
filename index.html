@@ -394,7 +394,7 @@
   window.__STATIC__ = true;
   function st(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch (e) {} return ''; }
   var q = new URLSearchParams(location.search), hs = new URLSearchParams(location.hash.replace(/^#/, ''));
-  var k = q.get('k') || '', o = hs.get('o') || '';
+  var k = q.get('k') || '', o = q.get('o') || hs.get('o') || ''; // ?o= survives Add to Home Screen; #o= is still accepted
   if (k) st('vk', k); else k = st('vk');
   if (o) st('ok', o); else o = st('ok');
   window.__ACCESS__ = { owner: !!o, key: o ? '' : k };
