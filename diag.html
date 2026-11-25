@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>Connection test</title>
+<style>body{font:16px/1.4 -apple-system,system-ui,sans-serif;background:#0b0b0c;color:#f0efec;margin:0;padding:20px}h1{font-size:20px}.r{border:1px solid #333;border-radius:10px;padding:10px 12px;margin:10px 0;background:#1a1a19}.ok{color:#4cd97b}.no{color:#ff7b72}small{color:#999;display:block;margin-top:4px;word-break:break-all}button{font:inherit;padding:10px 16px;border-radius:10px;border:0;background:#f0efec;color:#111}</style></head><body>
+<h1>Connection test</h1><p>Tap Run, wait about 20 seconds, then send a screenshot of the whole page.</p><button id="go">Run</button><div id="out"></div>
+<script src="config.js"></script>
+<script>
+var U=(window.APP_CONFIG||{}).execUrl||'', out=document.getElementById('out');
+function row(name,ok,detail){var d=document.createElement('div');d.className='r';d.innerHTML='<b class="'+(ok?'ok':'no')+'">'+(ok?'OK':'FAILED')+'</b> '+name+(detail?'<small>'+String(detail).replace(/</g,'&lt;')+'</small>':'');out.appendChild(d);}
+function t(p,ms){return Promise.race([p,new Promise(function(_,r){setTimeout(function(){r(new Error('timeout'))},ms)})]);}
+document.getElementById('go').onclick=async function(){
+  out.innerHTML=''; row('Address set',!!U,U.slice(0,60)+'...'); row('Browser',true,navigator.userAgent+' | online='+navigator.onLine+' | standalone='+(navigator.standalone===true));
+  try{var r=await t(fetch(U+'?api=1',{cache:'no-store'}),15000);var x=await r.text();row('1. Read with fetch (GET, normal)',true,r.status+' '+x.slice(0,80));}catch(e){row('1. Read with fetch (GET, normal)',false,e.name+': '+e.message);}
+  try{var r2=await t(fetch(U,{method:'POST',body:JSON.stringify({fn:'getTariffs',args:['x']})}),20000);var x2=await r2.text();row('2. Send with fetch (POST, what the app does)',true,r2.status+' '+x2.slice(0,100));}catch(e){row('2. Send with fetch (POST, what the app does)',false,e.name+': '+e.message);}
+  try{var r3=await t(fetch(U+'?api=1&x=1',{mode:'no-cors',cache:'no-store'}),15000);row('3. Fetch without reading the reply (no-cors)',true,'type='+r3.type);}catch(e){row('3. Fetch without reading the reply (no-cors)',false,e.name+': '+e.message);}
+  await new Promise(function(res){var s=document.createElement('script'),d=false;function f(ok,m){if(d)return;d=true;row('4. Load as a script tag',ok,m);res();}s.onload=function(){f(true,'loaded')};s.onerror=function(){f(false,'script error')};setTimeout(function(){f(false,'timeout')},15000);s.src=U+'?api=1&z='+Date.now();document.head.appendChild(s);});
+  try{var r5=await t(fetch('https://api.github.com/zen',{cache:'no-store'}),10000);row('5. Another site (GitHub) with fetch',true,r5.status);}catch(e){row('5. Another site (GitHub) with fetch',false,e.name+': '+e.message);}
+  row('Done',true,new Date().toString());
+};
+</script></body></html>
