@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'b51847f0b4', u = new URL(location.href);
+    var id = '154bff8db5', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -390,6 +390,7 @@
       <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Last 48 hours</h2><div class="legend" id="shLegend"></div><div class="chart" id="chSh"></div><div id="shHeat" style="margin-top:4px"></div><div class="sub" id="shHeatNote"></div></div>
       <div class="card" style="margin-top:14px"><h2 style="font-size:14px">What it has learned</h2><ul class="q" id="shLearn"></ul></div>
       <div class="card" id="shCalc" style="margin-top:14px" hidden><h2 style="font-size:14px">Try it</h2><div class="sub">How long would it take, using what it has learned? Change the numbers.</div><div id="shInputs" class="shin"></div><div id="shOut" style="margin-top:10px"></div></div>
+      <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Big loads around the house (last 7 days)</h2><div class="sub" id="blNote">Looking…</div><div id="blList" style="margin-top:6px"></div></div>
       <div class="card scroll" style="margin-top:14px"><h2 style="font-size:14px">Weather expected over the next 24 hours</h2><div class="sub">Outside temperature (°C), wind (m/s) and sunshine (W/m²).</div><table id="tblShFc" style="width:100%"></table></div>
     </section>
   </div>
@@ -1237,7 +1238,8 @@
     });
   }
   var SHD = null;
-  function loadSh() { gs('getSummerhouse', [(window.__ACCESS__ || {}).key || ''], function (r) { SHD = r; renderSh(r); }, function (e) { var m = $('shMsg'); m.hidden = false; m.textContent = 'Could not load the summerhouse: ' + e; }); }
+  function loadBl() { gs('getBigLoads', [(window.__ACCESS__ || {}).key || ''], function (r) { var L = $('blList'); clear(L); $('blNote').textContent = r.note + ' Based on ' + r.readings + ' readings.'; if (!r.events.length) L.appendChild(el('div', { class: 'sub' }, 'No big loads found yet.')); r.events.forEach(function (e) { var d = new Date(e.start), row = el('div', { class: 'sub', style: 'margin:5px 0;line-height:1.4' }); row.appendChild(el('b', null, d.toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ': ')); row.appendChild(document.createTextNode(e.kw + ' kW extra for about ' + e.mins + ' min. ' + e.label)); L.appendChild(row); }); }, function (e) { $('blNote').textContent = 'Could not load: ' + (e && e.message ? e.message : e); }); }
+  function loadSh() { loadBl(); gs('getSummerhouse', [(window.__ACCESS__ || {}).key || ''], function (r) { SHD = r; renderSh(r); }, function (e) { var m = $('shMsg'); m.hidden = false; m.textContent = 'Could not load the summerhouse: ' + e; }); }
   function shKe(M, wind, dirQ, rain) { return M.k + (M.kwq ? M.kwq[dirQ] : (M.kw || 0)) * wind + (M.kr || 0) * rain; }
   var COMPASS = ['north', 'east', 'south', 'west'];
   function dirQuad(d) { d = ((Number(d) % 360) + 360) % 360; return d >= 315 || d < 45 ? 0 : d < 135 ? 1 : d < 225 ? 2 : 3; }
