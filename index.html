@@ -653,12 +653,18 @@
       function (m) { if (id !== dayReq) return; document.body.classList.remove('dayloading'); $('dayMsg').textContent = 'Could not load that day: ' + m; });
   }
   // Phone site: after a day shows, quietly fetch its neighbours so the arrow buttons feel instant.
-  var pfDays = {};
+  var pfDone = false;
   function prefetchDays() {
-    if (!(window.__API__ && window.__API__.url) || !dayPack) return;
-    var cur = dayPack.date, lo = dayPack.minDate, hi = dayPack.maxDate, p = cur.split('-'), todo = [];
-    [-1, 1, -2, -3].forEach(function (d) { var ds = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + d)).toISOString().slice(0, 10); if ((lo && ds < lo) || (hi && ds > hi) || pfDays[ds]) return; pfDays[ds] = 1; todo.push(ds === hi ? '' : ds); });
-    (function next() { var a = todo.shift(); if (a === undefined) return; window.__quiet = true; try { gs('getDay', [dayKey(), a], function () { setTimeout(next, 250); }, function () { setTimeout(next, 250); }); } finally { window.__quiet = false; } })();
+    if (pfDone || !(window.__API__ && window.__API__.url) || !dayPack) return; pfDone = true;
+    var hi = dayPack.maxDate, lo = dayPack.minDate, p = hi.split('-'), dates = [];
+    for (var d = 1; d <= 7; d++) { var ds = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] - d)).toISOString().slice(0, 10); if (lo && ds < lo) break; dates.push(ds); }
+    if (!dates.length) return;
+    window.__quiet = true;
+    try {
+      gs('getDays', [dayKey(), dates], function (map) {
+        Object.keys(map || {}).forEach(function (d) { try { localStorage.setItem('c:getDay:' + JSON.stringify([dayKey(), d]), JSON.stringify({ t: Date.now(), r: map[d] })); } catch (e) {} });
+      }, function () { pfDone = false; });
+    } finally { window.__quiet = false; }
   }
   function shiftDay(delta) {
     var cur = (dayPack && dayPack.date) || (D.today && D.today.date); if (!cur) return;
@@ -872,7 +878,8 @@
       var ck = null, shown = false;
       if (/^get(Dashboard|Day|Tariffs|Cars|Activity|Brain|Summerhouse)$/.test(fn)) {
         ck = 'c:' + fn + ':' + JSON.stringify(args);
-        try { var raw = localStorage.getItem(ck); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r !== undefined) { shown = true; setTimeout(function () { ok(cv.r); }, 0); } } } catch (e) {}
+        var fresh = false; try { var raw = localStorage.getItem(ck); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r !== undefined) { shown = true; fresh = fn === 'getDay' && !!args[1] && Date.now() - cv.t < 3600e3; setTimeout(function () { ok(cv.r); }, 0); } } } catch (e) {}
+        if (fresh) return; // a finished day we fetched in the last hour: no need to ask the server again
         var ok0 = ok, bad0 = bad;
         ok = function (r) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), r: r })); } catch (e) {} ok0(r); };
         bad = function (m) { if (shown) return; bad0(m); };
