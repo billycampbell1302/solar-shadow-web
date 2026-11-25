@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '295ccf1485', u = new URL(location.href);
+    var id = 'a55d812ce1', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1394,6 +1394,7 @@
       ['Battery selling', fmt(kwA, 0) + ' kWh over ' + hc + ' months, 90% round trip, 3p wear'],
       ['Electric cars', NC > 0 && mdl.carOpts ? NC + (NC === 1 ? ' car, ' : ' cars, ') + fmt(mdl.carOpts[NC], 1) + ' kWh a day' : 'none counted'],
       ['Deals priced', srcTxt || '–'],
+      ['Slowest steps', (rawS.timing || []).slice().sort(function (a, b) { return b[1] - a[1]; }).slice(0, 4).map(function (x) { return x[0] + ' ' + Math.round(x[1]) + 's'; }).join(', ') || 'not recorded yet'],
       ['Scanned', (age2 < 60 ? age2 + ' min' : Math.round(age2 / 60) + ' h') + ' ago' + (S.seconds ? ', took ' + S.seconds + 's' : '') + (S.build ? ', build ' + S.build : '')]
     ];
     var bc = el('div', { class: 'card tfcard', style: 'margin-top:10px' }); bc.appendChild(tfHead('🔎', 'What this scan is based on'));
