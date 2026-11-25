@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'b8dac4ccc1', u = new URL(location.href);
+    var id = '16df96e418', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -46,6 +46,9 @@
   body { margin:0; background:var(--page); color:var(--ink); font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; }
   
   .wrap { max-width:1080px; margin:0 auto; padding:20px 16px 48px; }
+  header { position:relative; } header h1 { padding-right:44px; }
+  .cog { position:absolute; top:-4px; right:0; z-index:5; background:none; border:0; font-size:22px; line-height:1; padding:6px 8px; cursor:pointer; border-radius:10px; }
+  .cog:hover, .cog:focus-visible { background:rgba(128,128,128,.18); }
   header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:4px; }
   h1 { font-size:20px; margin:0; font-weight:650; letter-spacing:-.01em; }
   h2 { font-size:16px; margin:0 0 2px; font-weight:650; }
@@ -368,6 +371,17 @@
   details.recent.live summary { color:var(--ink); font-weight:600; }
   details.recent .rl { padding:3px 0; border-top:1px solid var(--grid); word-break:break-word; line-height:1.35; }
   #setupStatus li.wide { display:block; border:0; padding-top:2px !important; }
+
+  .tfl{font-size:12px;color:var(--muted,#8a8f98);font-weight:600}
+  .tfbig{font-size:26px;font-weight:700;margin:2px 0}
+  .tfs{font-size:12.5px;color:var(--muted,#8a8f98);line-height:1.4}
+  .tftiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:10px}
+  .tftile{border:1px solid var(--line,rgba(128,128,128,.3));border-radius:12px;padding:10px 12px}
+  .tfn{font-size:14px;font-weight:650;margin:2px 0}
+  .tfv{font-size:17px;font-weight:700}
+  .tfkv{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px 16px;margin-top:8px}
+  .tfkv1{font-size:13.5px;line-height:1.35}
+  .tfctl .daybar{margin:4px 0}.tfcl{min-width:150px}
 </style>
 </head>
 <body>
@@ -380,6 +394,7 @@
       <span class="pill" id="fresh">Loading…</span>
       <span class="pill ver" id="verPill" role="button" tabindex="0" hidden>Version…</span>
     </div>
+    <button type="button" class="cog" id="cogBtn" aria-label="Settings" title="Settings">⚙️</button>
   </header>
   <div class="sub" id="verNote" hidden></div>
   <nav class="tabs" role="tablist"><button role="tab" id="tabDash" aria-selected="true">Dashboard</button><button role="tab" id="tabLog" aria-selected="false">Daily log</button><button role="tab" id="tabAct" aria-selected="false">Activity</button><button role="tab" id="tabBr" aria-selected="false">Our software</button><button role="tab" id="tabTf" aria-selected="false">Tariffs</button><button role="tab" id="tabCar" aria-selected="false">Cars</button><button role="tab" id="tabSh" aria-selected="false">Summerhouse</button><button role="tab" id="tabSetup" aria-selected="false">Setup</button></nav>
@@ -487,7 +502,7 @@
   <div id="viewTf" hidden>
     <section aria-label="Tariffs">
       <h2>Tariff comparison</h2>
-      <div class="sub">Your real half-hour grid purchases from recent days, priced again on every Octopus, EDF and E.ON Next deal open to new customers (time-of-use ones included) in your area, next to what the current deal cost. Read-only: it only looks at public prices.</div>
+      <div class="sub">Your real grid purchases, priced again on every deal open to you. Import and export are ranked separately. Read-only.</div>
       <div class="daybar tfbar"><button class="btn primary" id="tfScan" hidden>Scan deals now</button><label class="sub" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="tfOnlyOk" checked> Only deals we can actually get</label><span class="sub" id="tfMsg"></span><span class="sub" id="tfLast" style="margin-left:auto"></span></div>
       <div id="tfOut"></div>
     </section>
@@ -495,7 +510,7 @@
   <div id="viewCar" hidden>
     <section aria-label="Cars">
       <h2>Electric cars</h2>
-      <div class="sub">Advice only: Intelligent Go does the charging, this says which car should go on the charger which night so neither runs low. It never talks to a car or a charger.</div>
+      <div class="sub">Advice only: this says which car should go on the charger which night so neither runs low. It never talks to a car or a charger.</div>
       <div id="carMsg" class="banner" style="margin-top:10px" hidden></div>
       <div id="carOut"></div>
     </section>
@@ -1247,106 +1262,108 @@
     var expTxt = function (t, h) { if (fixedOf(t) && h <= t.term) return 'fixed, no change'; var l = lvlAt(h); return (t.lowP === t.highP ? fmt(t.lowP * l, 1) + 'p' : fmt(t.lowP * l, 1) + 'p to ' + fmt(t.highP * l, 1) + 'p') + (fixedOf(t) ? ' after the fixed term' : ''); };
     var exName = function (t, h) { var i = t.proj[h][5]; return i >= 0 ? S.exNames[i] : ''; };
 
-    // headline answer first
-    (function () {
-      var perM = function (t) { return diffOf(t) / hOf(t); }, best = rows[0];
-      var iog = rows.filter(function (t) { return /intelligent/i.test(t.name || ''); })[0];
-      var hc0 = hOf(best), hd = el('div', { class: 'card headline', style: 'margin-top:10px' });
-      var save = -perM(best);
-      hd.appendChild(el('div', { class: 'sub' }, 'The short answer'));
-      hd.appendChild(el('div', { style: 'font-size:20px;font-weight:650;margin:2px 0' }, save > 0.5 ? best.name + ' would be about ' + pounds(save) + ' a month cheaper than ' + cur.name + '.' : cur.name + ' is already the cheapest we can get.'));
-      hd.appendChild(el('div', { class: 'sub' }, iog ? 'Intelligent Octopus Go: ' + (perM(iog) < -0.5 ? 'about ' + pounds(-perM(iog)) + ' a month cheaper' : perM(iog) > 0.5 ? 'about ' + pounds(perM(iog)) + ' a month dearer' : 'about the same') + ' than ' + cur.name + ', with the cars included. ' + (rows.indexOf(iog) === 0 ? 'It is the best deal.' : 'It is number ' + (rows.indexOf(iog) + 1) + ' of ' + rows.length + '.') : 'Intelligent Octopus Go is not in this scan yet. Press Scan deals now.'));
-      var same = rows.filter(function (t) { return !cur.fromOctopus && /\bgo\b/i.test(t.name || '') && !/intelligent|fixed|flex|faster|12m|ev/i.test(t.name || '') && !t.blocked; })[0];
-      if (same && /\bgo\b/i.test(cur.name) && Math.abs(perM(same)) > 0.5) {
-        var hh = hOf(same), a = S.curProj[hh], b = same.proj[hh];
-        hd.appendChild(el('div', { class: 'sub', style: 'color:var(--ours);margin-top:6px' }, 'Check this: "' + same.name + '" is the same product as your current ' + cur.name + ', so they should price the same, yet it comes out ' + pounds(Math.abs(perM(same))) + ' a month ' + (perM(same) < 0 ? 'cheaper' : 'dearer') + '. Over ' + hh + ' months, import ' + pounds(a[0]) + ' (current) against ' + pounds(b[0]) + ', export earnings ' + pounds(a[1]) + ' against ' + pounds(b[1]) + '. The difference is in the ' + (Math.abs(a[0] - b[0]) >= Math.abs(a[1] - b[1]) ? 'import side (standing charge, rate window or the car)' : 'export pairing') + ', not the unit rates. Treat the ranking with care until this is explained.'));
-      }
-      hd.appendChild(el('div', { class: 'sub' }, 'Based on ' + (hc0 > 0 ? 'the next ' + hc0 + ' months' : 'a year') + ' of your real usage' + (mdl && mdl.car ? ' plus the cars' : '') + '. Details below.'));
-      out.appendChild(hd);
-    })();
-    if (rawS.whatIf && rawS.curScen) {
-      var sb = el('div', { class: 'daybar', style: 'margin-top:10px;flex-wrap:wrap' }); sb.appendChild(el('span', { class: 'sub' }, 'If prices rise from January by:'));
-      [['base', 'Our forecast']].concat(rawS.whatIf.map(function (L) { return [String(L), L === 0 ? 'No rise' : '+' + L + '%']; })).forEach(function (o) {
-        var bt = el('button', { class: 'btn sm' + (SC === o[0] ? ' primary' : ''), type: 'button' }, o[1]); bt.addEventListener('click', function () { window.TFSCEN = o[0]; renderTf(); }); sb.appendChild(bt);
-      });
-      out.appendChild(sb);
-      var flips = rawS.whatIf.map(function (L) {
-        var bestT = null, bestV = 1e18; rawS.tariffs.forEach(function (t) { if (t.blocked && only) return; if (!t.scen || !t.scen[L]) return; var h = hOf(t), v = (t.scen[L][h] || t.scen[L][12] || [0, 0, 1e9])[2] / h; if (v < bestV) { bestV = v; bestT = t; } });
-        return (L === 0 ? 'no rise' : '+' + L + '%') + ': ' + (bestT ? bestT.name : '–');
-      });
-      out.appendChild(el('div', { class: 'sub', style: 'margin:4px 0 0' }, 'Best deal at each rise: ' + flips.join('; ') + '. If these differ, the choice depends on the rise; if not, it does not.'));
-    }
-    // comparison basis
-    var bar = el('div', { class: 'daybar', style: 'margin-top:10px;flex-wrap:wrap' }); bar.appendChild(el('span', { class: 'sub' }, 'Compare over:'));
-    [['own', 'Each deal\'s own term']].concat(hz.map(function (h) { return [String(h), h + ' months']; })).forEach(function (o) {
-      var b = el('button', { class: 'btn sm' + (TFMODE === o[0] ? ' primary' : ''), type: 'button' }, o[1]); b.addEventListener('click', function () { TFMODE = o[0]; renderTf(); }); bar.appendChild(b);
-    });
-    out.appendChild(bar);
-    out.appendChild(el('div', { class: 'sub', style: 'margin:4px 0 0' }, TFMODE === 'own' ? 'A 12 month fix is judged over 12 months, an 18 month fix over 18, and variable deals over 12, each against what the current deal would cost over the same months.' : 'Every deal is judged over the same ' + TFMODE + ' months. A fix shorter than that goes back to the variable price afterwards.'));
-
-    // best tariff box
-    var bf = null, bv = null; rows.forEach(function (t) { if (!bf && fixedOf(t)) bf = t; if (!bv && !fixedOf(t)) bv = t; });
-    var picks = [['Best overall', rows[0]], ['Best fixed price', bf], ['Best variable price', bv]].filter(function (x, i, a) { return x[1] && !(i > 0 && x[1] === a[0][1]); });
-    var grid = el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:10px' });
-    // Your current tariff first, then the best alternatives. Every card is compared with the current tariff over the same months.
+    // ---- 1. the answer: import, export and the two together ----
     var hc = TFMODE === 'own' ? 12 : +TFMODE, cp = S.curProj[hc], cr = cur.rates;
-    function sect(c, title, lines) {
-      var s = el('div', { style: 'margin-top:10px;padding-top:8px;border-top:1px solid var(--line, rgba(128,128,128,.3))' });
-      s.appendChild(el('div', { class: 'sub', style: 'font-weight:650;letter-spacing:.04em;text-transform:uppercase;font-size:11px' }, title));
-      lines.forEach(function (l) { s.appendChild(el('div', { class: 'sub', style: 'margin-top:3px;line-height:1.45' }, l)); });
-      c.appendChild(s);
-    }
-    var ccard = el('div', { class: 'card', style: 'margin-top:10px' });
-    ccard.appendChild(el('div', { class: 'sub' }, 'YOUR CURRENT TARIFF (what everything below is compared with)' + (cur.fromOctopus ? ' · read from your Octopus account' + (cur.tariffCode ? ' (' + cur.tariffCode + ')' : '') : ' · typed in the settings file. ' + (cur.liveError ? 'Reading it from Octopus failed: ' + cur.liveError : 'Press Scan deals now to read it from Octopus.'))));
-    ccard.appendChild(el('div', { style: 'font-size:17px;font-weight:650;margin:2px 0' }, cur.name));
-    sect(ccard, 'Import: what you pay', [
-      cr ? 'Cheap rate ' + fmt(cr.night, 2) + 'p per kWh from ' + cr.from + ' to ' + cr.to + ', day rate ' + fmt(cr.day, 2) + 'p per kWh' + (cr.standing ? ', standing charge ' + fmt(cr.standing, 1) + 'p a day.' : '.') : 'Rates not set in Config.',
-      'Expected cost over the next ' + hc + ' months: ' + pounds(cp[0]) + '.'
+    var best = rows[0], hB = hOf(best), pB = best.proj[hB], cB = S.curProj[hB], dB = diffOf(best);
+    var impM = function (t) { var h = hOf(t); return (t.proj[h][0] - S.curProj[h][0]) / h; };            // extra import cost per month against current (negative = cheaper)
+    var impRows = all.slice().sort(function (a, b) { return impM(a) - impM(b); });
+    var exVal = function (e) { return SC !== 'base' && e.scen && e.scen[SC] && e.scen[SC][hc] !== undefined ? e.scen[SC][hc] : (e.proj && e.proj[hc] ? e.proj[hc][0] : 0); };
+    var exAll = (S.exports || []).filter(function (e) { return !(only && e.blocked) && e.proj; }).sort(function (a, b) { return exVal(b) - exVal(a); });
+    var exM = function (e) { return (exVal(e) - cp[1]) / hc; };                                          // extra export income per month against current
+    var tile = function (host, label, name, money, good, note) {
+      var t = el('div', { class: 'tftile' });
+      t.appendChild(el('div', { class: 'tfl' }, label)); t.appendChild(el('div', { class: 'tfn' }, name));
+      t.appendChild(el('div', { class: 'tfv ' + (good ? 'pos' : '') }, money)); if (note) t.appendChild(el('div', { class: 'tfs' }, note)); host.appendChild(t);
+    };
+    var mo = function (v) { return (v >= 0 ? '+' : '-') + pounds(Math.abs(v)) + ' / month'; };
+    var hd = el('div', { class: 'card headline', style: 'margin-top:10px' });
+    hd.appendChild(el('div', { class: 'tfl' }, 'Best result over ' + hB + ' months, against ' + cur.name));
+    hd.appendChild(el('div', { class: 'tfbig' }, -dB / hB > 0.5 ? 'Save ' + pounds(-dB / hB) + ' a month' : 'Stay on ' + cur.name));
+    hd.appendChild(el('div', { class: 'tfs' }, -dB / hB > 0.5 ? best.name + ' with ' + (exName(best, hB) || 'no export deal') + ' (' + pounds(-dB) + ' over ' + hB + ' months)' : 'Nothing we can get beats it'));
+    var tg = el('div', { class: 'tftiles' });
+    var bi = impRows[0], be = exAll[0];
+    if (bi) tile(tg, 'Best import deal', bi.name, mo(-impM(bi)), impM(bi) < 0, 'Current: ' + cur.name);
+    if (be) tile(tg, 'Best export deal', be.name, mo(exM(be)), exM(be) > 0, 'Current: ' + (cur.exportName || 'none'));
+    tile(tg, 'Best pair together', best.name + ' + ' + (exName(best, hB) || 'none'), mo(-dB / hB), dB < 0, 'Export deals only pair with their own supplier');
+    hd.appendChild(tg); out.appendChild(hd);
+
+    // ---- controls ----
+    var ctl = el('div', { class: 'card tfctl', style: 'margin-top:10px' });
+    var crow = function (label, opts, cur0, fn) {
+      var r = el('div', { class: 'daybar', style: 'flex-wrap:wrap;gap:6px' }); r.appendChild(el('span', { class: 'sub tfcl' }, label));
+      opts.forEach(function (o) { var b = el('button', { class: 'btn sm' + (cur0 === o[0] ? ' primary' : ''), type: 'button' }, o[1]); b.addEventListener('click', function () { fn(o[0]); renderTf(); }); r.appendChild(b); });
+      ctl.appendChild(r);
+    };
+    crow('Compare over', [['own', 'Own term']].concat(hz.map(function (h) { return [String(h), h + ' months']; })), TFMODE, function (v) { TFMODE = v; });
+    if (rawS.whatIf && rawS.curScen) crow('Prices from January', [['base', 'Forecast']].concat(rawS.whatIf.map(function (L) { return [String(L), L === 0 ? 'No rise' : '+' + L + '%']; })), SC, function (v) { window.TFSCEN = v; });
+    out.appendChild(ctl);
+
+    // ---- 2. import deals ----
+    var ic = el('div', { class: 'card', style: 'margin-top:10px' }), is = el('div', { class: 'scroll' });
+    ic.appendChild(el('h2', { style: 'font-size:15px' }, 'Import deals'));
+    ic.appendChild(el('div', { class: 'tfs' }, 'What your real half-hour grid purchases would cost. Cost is over the months shown; the last column is against your current deal.')); ic.appendChild(is);
+    var curRates = cr ? fmt(cr.night, 1) + 'p night · ' + fmt(cr.day, 1) + 'p day' : 'not set';
+    var irows = [['Your current: ' + cur.name, 'Variable', curRates, fmt(cr && cr.standing, 1), hc + '', pounds(cp[0]), '–']];
+    impRows.slice(0, 14).forEach(function (t) { var h = hOf(t), m = impM(t); irows.push([t.name, fixedOf(t) ? 'Fixed ' + t.term + ' m' : /tracker|agile|half-hourly/i.test(t.kind) ? 'Market' : 'Variable', rateTxt(t), fmt(t.standingP, 1), h + '', pounds(t.proj[h][0]), (m <= 0 ? '-' : '+') + pounds(Math.abs(m)) + ' / m']); });
+    table(is, ['Deal', 'Type', 'Unit rate', 'Standing p/day', 'Months', 'Import cost', 'Against current'], irows);
+    out.appendChild(ic);
+
+    // ---- 3. export deals ----
+    var ec = el('div', { class: 'card', style: 'margin-top:10px' }), es = el('div', { class: 'scroll' });
+    ec.appendChild(el('h2', { style: 'font-size:15px' }, 'Export deals'));
+    var kwS = 0, kwA = 0; (mdl.months || []).slice(0, Math.min(hc, 12)).forEach(function (m) { var p = m[0].split('-'), dd = new Date(Date.UTC(+p[0], +p[1], 0)).getUTCDate(); kwS += m[2] * dd; kwA += (m[6] || 0) * dd; }); if (hc > 12) { kwS = kwS * hc / 12; kwA = kwA * hc / 12; }
+    ec.appendChild(el('div', { class: 'tfs' }, 'Income over ' + hc + ' months from about ' + Math.round(kwS) + ' kWh of spare solar and ' + Math.round(kwA) + ' kWh of battery selling at the evening peak. Limit ' + (mdl.cap || '–') + ' kWh a day. ' + (S.exportMode === 'estimated' ? 'Export is not approved yet, so this is modelled.' : 'Based on real exports.'))); ec.appendChild(es);
+    var erows = [['Your current: ' + (cur.exportName || 'none'), '', '', '', pounds(cp[1]), '–']];
+    exAll.slice(0, 12).forEach(function (e) { var m = exM(e); erows.push([e.name, e.supplier || '', e.lowP === e.highP ? fmt(e.lowP, 1) + 'p' : fmt(e.avgP, 1) + 'p avg · ' + (e.peakP !== null && e.peakP !== undefined ? fmt(e.peakP, 1) + 'p peak' : fmt(e.highP, 1) + 'p high'), e.sid === 'any' ? 'Any import deal' : e.flux ? 'Their Flux import' : 'Their import deal', pounds(exVal(e)), (m >= 0 ? '+' : '-') + pounds(Math.abs(m)) + ' / m']); });
+    table(es, ['Deal', 'Supplier', 'Price', 'Needs', 'Earns', 'Against current'], erows.map(function (r) { return r.length === 6 && r[1] === '' ? [r[0], '', '', '', r[4], r[5]] : r; }));
+    out.appendChild(ec);
+
+    // ---- 4. best pair against current, line by line ----
+    var pc = el('div', { class: 'card', style: 'margin-top:10px' }), ps = el('div', { class: 'scroll' });
+    pc.appendChild(el('h2', { style: 'font-size:15px' }, 'Best pair against your current deal, over ' + hB + ' months')); pc.appendChild(ps);
+    var abP = pB[6] || 0;
+    table(ps, ['', 'Your current', 'Best pair'], [
+      ['Import deal', cur.name, best.name],
+      ['Unit rate', curRates, rateTxt(best)],
+      ['Standing charge', cr ? fmt(cr.standing, 1) + 'p/day' : '–', fmt(best.standingP, 1) + 'p/day'],
+      ['Contract', 'Variable', fixedOf(best) ? 'Fixed ' + best.term + ' months' : 'Variable'],
+      ['Import cost', pounds(cB[0]), pounds(pB[0])],
+      ['Export deal', cur.exportName || 'none', exName(best, hB) || 'none'],
+      ['Export income', pounds(cB[1]), pounds(pB[1])],
+      ['of which battery selling', pounds((cB[6] || 0)), pounds(abP)],
+      ['Net cost', pounds(cB[2]), pounds(pB[2])],
+      ['Per month', pounds(cB[2] / hB), pounds(pB[2] / hB)],
+      ['Range', pB[4] - pB[3] > 50 ? pounds(pB[3]) + ' to ' + pounds(pB[4]) : 'fixed', '']
     ]);
-    sect(ccard, 'Export: what you earn', [
-      cur.exportName + ' (the app assumes you export at these). Expected over ' + hc + ' months: ' + pounds(cp[1]) + (function () {
-        var kw = 0, ab = 0; (mdl.months || []).slice(0, Math.min(hc, 12)).forEach(function (m) { var p = m[0].split('-'), dd = new Date(Date.UTC(+p[0], +p[1], 0)).getUTCDate(); kw += m[2] * dd; ab += (m[6] || 0) * dd; });
-        if (hc > 12) { kw = kw * hc / 12; ab = ab * hc / 12; }
-        var tot = kw + ab; return tot > 1 ? ', which is about ' + Math.round(kw) + ' kWh of spare solar' + (ab > 1 ? ' plus ' + Math.round(ab) + ' kWh bought cheap overnight and sold at the evening peak' : '') + ', roughly ' + fmt(cp[1] / tot, 1) + 'p each. Worked out day by day through the year: solar covers the house and fills the battery first, so battery selling only happens in the months when there is room left, and the total is capped at 6 kWh a day. Prices use each half hour\'s average from the history.' : '.'; })(),
-      'Export is not approved yet, so this is what you would earn once it is.'
-    ]);
-    sect(ccard, 'Net cost over ' + hc + ' months', ['Import ' + pounds(cp[0]) + ' less export ' + pounds(cp[1]) + ' = ' + pounds(cp[2]) + ' (about ' + pounds(cp[2] / hc) + ' a month).']);
-    out.appendChild(ccard);
-    var grid = el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:10px;margin-top:10px' });
-    picks.forEach(function (pk) {
-      var t = pk[1], h = hOf(t), p = t.proj[h], d = diffOf(t), cc0 = S.curProj[h], c = el('div', { class: 'card' });
-      c.appendChild(el('div', { class: 'sub' }, pk[0].toUpperCase() + ' (judged over ' + h + ' months)'));
-      c.appendChild(el('div', { style: 'font-size:16px;font-weight:650;margin:2px 0' }, t.name));
-      c.appendChild(el('div', { class: 'sub' }, typeOf(t) + (t.code ? ' · ' + t.code : '')));
-      var imp = [fixedOf(t) ? 'Fixed price: ' + rateTxt(t) + ' per kWh for ' + t.term + ' months, standing charge ' + fmt(t.standingP, 1) + 'p a day.' : 'Price today: ' + rateTxt(t) + ' per kWh, standing charge ' + fmt(t.standingP, 1) + 'p a day.'];
-      if (!(fixedOf(t) && h <= t.term)) imp.push('Expected over the period: ' + expTxt(t, h) + (stepM ? ' (price cap outlook: about ' + Math.round((lvlAt(h) - 1) * 100) + '% higher from ' + monthName(stepM) + ')' : '') + '.');
-      imp.push('Cost over ' + h + ' months: ' + pounds(p[0]) + '.');
-      sect(c, 'Import: what you would pay', imp);
-      var ex = [exName(t, h) ? 'Paired with: ' + exName(t, h) + '.' : 'No export deal paired.', 'Earns over ' + h + ' months: ' + pounds(p[1]) + '.'];
-      if (/battery/i.test(exName(t, h) || '')) ex.push('This export deal may need a particular battery or installer. Check its eligibility.');
-      sect(c, 'Export: what you would earn', ex);
-      sect(c, 'Net cost over ' + h + ' months', ['Import ' + pounds(p[0]) + ' less export ' + pounds(p[1]) + ' = ' + pounds(p[2]) + (p[4] - p[3] > 50 ? ' (range ' + pounds(p[3]) + ' to ' + pounds(p[4]) + ')' : '') + '.']);
-      var v = el('div', { style: 'margin-top:10px;padding-top:8px;border-top:1px solid var(--line, rgba(128,128,128,.3))' });
-      v.appendChild(el('div', { class: 'sub' }, 'Against ' + cur.name + ' (net ' + pounds(cc0[2]) + ' over the same ' + h + ' months):'));
-      v.appendChild(el('div', { class: 'num ' + (d < 0 ? 'pos' : ''), style: 'font-size:20px;font-weight:650;margin-top:2px' }, d < 0 ? pounds(-d / h) + ' a month better off' : d === 0 ? 'The same cost' : pounds(d / h) + ' a month worse off'));
-      v.appendChild(el('div', { class: 'sub' }, d < 0 ? 'About ' + pounds(-d) + ' less over ' + h + ' months.' : 'About ' + pounds(d) + ' more over ' + h + ' months.'));
-      c.appendChild(v);
-      if (t.ev) c.appendChild(el('div', { class: 'sub', style: 'margin-top:8px' }, 'Electric-car deal: needs the car or charger registered with that supplier. Your Zappi is a compatible charger.'));
-      grid.appendChild(c);
-    });
-    out.appendChild(grid);
-    var cc = el('div', { class: 'sub', style: 'margin-top:6px' }, 'Based on ' + dayLabel(S.from) + ' to ' + dayLabel(S.to) + ' of real purchases (' + S.days + ' full days) projected forward with a seasonal model, ' + S.region + '. Scanned ' + (age < 1 ? 'less than an hour' : age < 48 ? age + ' hours' : Math.round(age / 24) + ' days') + ' ago. Current deal: ' + cur.name + '.' + (S.model && S.model.car > 0 ? ' Electric cars: ' + fmt(S.model.car, 1) + ' kWh a day charged in each deal\'s cheapest four hours (from the car settings in Setup).' : ' No electric car is counted yet, so Intelligent Go cannot show its advantage.'));
-    out.appendChild(cc);
+    out.appendChild(pc);
+
+    // ---- 5. what this scan is based on ----
+    var age2 = Math.round((Date.now() - S.made) / 60000), srcTxt = (S.sources || []).map(function (d) { return d.label + ' ' + (d.priced || 0); }).join(', ');
+    var kv = [
+      ['Usage', dayLabel(S.from) + ' to ' + dayLabel(S.to) + ', ' + S.days + ' full days, ' + fmt(S.kwh, 0) + ' kWh bought'],
+      ['Area', S.region],
+      ['Current deal', cur.name + (cur.fromOctopus ? ' (from your Octopus account)' : ' (typed in settings)')],
+      ['House model', mdl.daysObserved + ' days recorded, ' + mdl.monthsReal + ' of 12 months real'],
+      ['Price outlook', stepM ? '+' + Math.round((lvlAt(12) - 1) * 100) + '% from ' + monthName(stepM) + (SC !== 'base' ? ' (what-if ' + (SC === '0' ? 'no rise' : '+' + SC + '%') + ')' : '') : 'no change'],
+      ['Export', (mdl.cap || '–') + ' kWh/day limit, ' + (S.exportMode === 'estimated' ? 'not approved, modelled' : 'real exports')],
+      ['Battery selling', fmt(kwA, 0) + ' kWh over ' + hc + ' months, 90% round trip, 3p wear'],
+      ['Electric cars', mdl.car ? fmt(mdl.car, 1) + ' kWh a day counted' : 'not counted yet'],
+      ['Deals priced', srcTxt || '–'],
+      ['Scanned', (age2 < 60 ? age2 + ' min' : Math.round(age2 / 60) + ' h') + ' ago' + (S.seconds ? ', took ' + S.seconds + 's' : '') + (S.build ? ', build ' + S.build : '')]
+    ];
+    var bc = el('div', { class: 'card', style: 'margin-top:10px' }); bc.appendChild(el('h2', { style: 'font-size:15px' }, 'What this scan is based on'));
+    var kg = el('div', { class: 'tfkv' }); kv.forEach(function (r) { var d = el('div', { class: 'tfk' }); d.appendChild(el('div', { class: 'tfl' }, r[0])); d.appendChild(el('div', { class: 'tfkv1' }, r[1])); kg.appendChild(d); }); bc.appendChild(kg);
+    out.appendChild(bc);
     if (S.sources && S.sources.length) {
-      var ds = S.sources.map(function (d) { return d.label + ': ' + (d.priced ? d.priced + ' deals priced' + (d.older ? ' (' + d.older + ' older versions ignored)' : '') : d.error ? 'not available (' + d.error + ')' : 'no deals priced') + (d.priced === 0 && d.label !== 'Octopus' && S.trackerRows ? ', using Tariff Tracker figures instead' : ''); });
-      out.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Sources: ' + ds.join(' · ') + '.'));
-      S.sources.forEach(function (d) { (d.watch || []).forEach(function (w) { out.appendChild(el('div', { class: 'sub', style: 'margin-top:2px' }, 'Octopus listing, ' + w.name + ' (' + w.code + '): ' + w.why + '.')); }); });
+      var nd = el('details', { class: 'setgrp', style: 'margin-top:10px' }), nb = el('div', { class: 'body' }); nd.appendChild(el('summary', null, 'Deals not priced and why')); nd.appendChild(nb);
+      S.sources.forEach(function (d) { nb.appendChild(el('div', { class: 'sub', style: 'margin:4px 0' }, d.label + ': ' + (d.priced ? d.priced + ' priced' + (d.older ? ', ' + d.older + ' older versions ignored' : '') : d.error ? 'not available (' + d.error + ')' : 'none priced'))); (d.watch || []).forEach(function (w) { nb.appendChild(el('div', { class: 'sub', style: 'margin:2px 0' }, w.name + ' (' + w.code + '): ' + w.why)); }); });
+      out.appendChild(nd);
     }
 
     // saving per month, every deal on its own basis
     var top = rows.slice(0, 12), items = top.map(function (t) { var h = hOf(t); return { name: t.name, sub: typeOf(t) + ' · ' + t.kind + ' · over ' + h + ' months', v: -diffOf(t) / h, c: t.manual ? 'var(--predbat)' : t.other ? 'var(--perfect)' : 'var(--solis)' }; });
     var mx = Math.max.apply(null, items.map(function (i) { return Math.abs(i.v); }).concat([1]));
-    var c2 = el('div', { class: 'card', style: 'margin-top:10px' }); c2.appendChild(el('h2', { style: 'font-size:14px' }, 'Better or worse off per month than ' + cur.name));
+    var c2 = el('div', { class: 'card', style: 'margin-top:10px' }); c2.appendChild(el('h2', { style: 'font-size:14px' }, 'Best pairs, per month against ' + cur.name));
     var bars = el('div', { class: 'bars' });
     items.forEach(function (it) {
       var row = el('div', { class: 'row' }), nm = el('div', { class: 'name' }, it.name); nm.appendChild(el('small', null, it.sub));
@@ -1357,22 +1374,12 @@
     c2.appendChild(bars); out.appendChild(c2);
 
     // table
-    var tc = el('div', { class: 'card', style: 'margin-top:10px' }), sc = el('div', { class: 'scroll' }); tc.appendChild(el('h2', { style: 'font-size:14px' }, 'All ' + rows.length + ' deals, best first')); tc.appendChild(sc);
+    var tc = el('details', { class: 'setgrp', style: 'margin-top:10px' }), sc = el('div', { class: 'body scroll' }); tc.appendChild(el('summary', null, 'Every import and export pairing (' + rows.length + ')')); tc.appendChild(sc);
     table(sc, ['Import deal', 'Export deal paired', 'Over', 'Import cost', 'Export earns', 'Net cost', 'Range', 'Against current', 'Rate now', 'Expected rate', 'Standing (p/day)', 'Price type', 'Contract'], rows.map(function (t) {
       var h = hOf(t), p = t.proj[h], d = diffOf(t);
       return [t.name, exName(t, h) || 'None paired', h + ' months', pounds(p[0]), pounds(p[1]), pounds(p[2]), p[4] - p[3] > 50 ? pounds(p[3]) + ' to ' + pounds(p[4]) : 'fixed', pounds(d, true), rateTxt(t), expTxt(t, h), fmt(t.standingP, 1), typeOf(t), t.term ? t.term + ' months' + (t.exitFeeP ? ', exit fee ' + pounds(t.exitFeeP) : '') : 'No fixed term'];
     }));
     out.appendChild(tc);
-
-    if (S.exports && S.exports.length) {
-      var ec = el('div', { class: 'card', style: 'margin-top:10px' }), es = el('div', { class: 'scroll' }), ex = S.exports.filter(function (e) { return !(only && e.blocked); });
-      ec.appendChild(el('h2', { style: 'font-size:14px' }, 'Export deals (selling solar back)'));
-      ec.appendChild(el('div', { class: 'sub' }, 'Export is capped at ' + (mdl.cap ? mdl.cap + ' kWh a day (UKPN limit)' : 'the inverter limit') + '. ' + (S.exportMode === 'estimated' ? 'It is not approved yet, so expected export is modelled from solar left over after the house.' : 'Recent earnings use real exports.'))); ec.appendChild(es);
-      table(es, ['Export deal', 'Supplier', 'Rate (p/kWh)', 'Contract', 'You also need'], ex.map(function (e) {
-        return [e.name, e.supplier || '', e.lowP === e.highP ? fmt(e.lowP, 1) : fmt(e.lowP, 1) + ' to ' + fmt(e.highP, 1), e.term ? e.term + ' months' : 'No fixed term', e.sid === 'any' ? 'Any import deal' : e.flux ? 'Their Flux import' : 'Their import deal (' + (e.supplier || e.sid) + ')'];
-      }));
-      out.appendChild(ec);
-    }
 
     // how reliable
     var rd = el('details', { class: 'setgrp', style: 'margin-top:10px' }), rs = el('summary', null, 'How reliable is this? ' + mdl.daysObserved + ' days recorded, ' + mdl.monthsReal + ' of 12 months with real data'), rb = el('div', { class: 'body' }); rd.appendChild(rs); rd.appendChild(rb);
@@ -1387,7 +1394,7 @@
       lb.appendChild(el('div', { class: 'sub', style: 'margin:8px 0' }, 'Based on what the house has: smart meter, solar and battery, no heat pump or storage heaters. The electric car counts because the Tesla charges here from 28 November. Untick the box above to see them anyway.'));
       out.appendChild(lc);
     }
-    var nt = el('div', { class: 'card', style: 'margin-top:10px' }); nt.appendChild(el('h2', { style: 'font-size:14px' }, 'How to read this'));
+    var nt = el('details', { class: 'setgrp', style: 'margin-top:10px' }); nt.appendChild(el('summary', null, 'How to read this'));
     ['Each deal is priced on the half-hour pattern of what the house really buys from the grid, projected over the months ahead, plus its standing charge, minus what its paired export deal would pay. Octopus export needs Octopus import, EDF with EDF, E.ON Next with E.ON Next. Flux import and export only come as a pair.',
      'Fixed deals stay flat for their term and then follow the variable price. Variable, tracker and half-hourly deals follow the "PriceOutlook" sheet: the price level against today\'s rates by month. It starts from published bill-level forecasts (Cornwall Insight, Nov 2026: about 26% up in January) because an electricity-only forecast is not published, so edit that sheet when Ofgem confirms a cap. The range widens about 1% a month ahead.',
      'The time of day pattern is held at what recent days showed, and the battery is run for the current deal, so cheap-night, Agile and tracker deals are probably a little pessimistic. If the car is not yet in the recorded days, set extraKwhPerDay in Config.gs under projection.',
@@ -1735,9 +1742,9 @@
   };
   function set(btn, t, label, icon) { btn.setAttribute('data-t', t); if (icon) btn.querySelector('svg').outerHTML = icon; btn.lastChild.textContent = label; }
   var bl = bar.querySelector('button[data-t="log"]'), bt = bar.querySelector('button[data-t="tf"]');
-  if (bl) set(bl, 'log', 'Money', icons.money);
-  if (bt) set(bt, 'sh', 'Summerhouse', icons.sh);
-  var order = ['dash', 'log', 'car', 'sh', 'more'];
+  if (bl) set(bl, 'log', 'Results', icons.money);
+  if (bt) { var shB = bt.cloneNode(true); set(shB, 'sh', 'Summerhouse', icons.sh); shB.setAttribute('aria-selected', 'false'); bt.parentNode.insertBefore(shB, bt.nextSibling); }
+  var order = ['dash', 'log', 'tf', 'car', 'sh', 'more'];
   order.forEach(function (t) { var b = bar.querySelector('button[data-t="' + t + '"]'); if (b) bar.appendChild(b); });
   var sheet = $('moreSheet'); if (sheet) { var s = sheet.querySelector('button[data-t="sh"]'); if (s) s.remove(); }
   // Money: Daily results and Tariffs together
@@ -1749,10 +1756,8 @@
     }); return s;
   }
   var vl = $('viewLog'), vt = $('viewTf');
-  if (vl) vl.insertBefore(moneySeg('tabLog'), vl.firstChild);
-  if (vt) vt.insertBefore(moneySeg('tabTf'), vt.firstChild);
   // keep the bottom bar's highlight in step with whichever page is showing
-  var group = { tabDash: 'dash', tabLog: 'log', tabTf: 'log', tabCar: 'car', tabSh: 'sh' };
+  var group = { tabDash: 'dash', tabLog: 'log', tabTf: 'tf', tabCar: 'car', tabSh: 'sh' };
   function sync() {
     var cur = document.querySelector('nav.tabs button[aria-selected="true"]'), g = cur ? (group[cur.id] || 'more') : 'dash';
     Array.prototype.forEach.call(bar.querySelectorAll('button'), function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-t') === g)); });
@@ -1765,6 +1770,7 @@
 <script>
 /* Setup tidy: Tools tucked away so Settings and sharing lead */
 (function () {
+  var cg = document.getElementById('cogBtn'); if (cg) cg.addEventListener('click', function () { var t = document.getElementById('tabSetup'); if (t) t.click(); window.scrollTo(0, 0); });
   var v = document.getElementById('viewSetup'); if (!v) return;
   Array.prototype.forEach.call(v.querySelectorAll('section'), function (s) {
     var h = s.querySelector('h2'); if (!h || h.textContent !== 'Tools') return;
@@ -1777,7 +1783,7 @@
 <script>
 /* Look v3: emoji icons on the bottom bar and More menu, as in the home heating app */
 (function () {
-  var em = { dash: '☀️', log: '💷', car: '🚗', sh: '🏡', more: '⋯' };
+  var em = { dash: '☀️', log: '💷', tf: '🏷️', car: '🚗', sh: '🏡', more: '⋯' };
   function paint() {
     var bar = document.getElementById('botbar'); if (!bar) return;
     Array.prototype.forEach.call(bar.querySelectorAll('button'), function (b) {
