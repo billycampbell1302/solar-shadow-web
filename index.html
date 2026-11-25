@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'b0676615fd', u = new URL(location.href);
+    var id = '295ccf1485', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1345,8 +1345,11 @@
     ic.appendChild(el('div', { class: 'tfs' }, 'What your real half-hour grid purchases would cost. Cost is over the months shown; the last column is against your current deal.')); ic.appendChild(is);
     var curRates = cr ? fmt(cr.night, 1) + 'p night · ' + fmt(cr.day, 1) + 'p day' : 'not set';
     var irows = [['Your current: ' + cur.name, 'Variable', curRates, fmt(cr && cr.standing, 1), hc + '', pounds(cp[0]), '–']];
-    impRows.slice(0, 14).forEach(function (t) { var h = hOf(t), m = impM(t); irows.push([t.name, fixedOf(t) ? 'Fixed ' + t.term + ' m' : /tracker|agile|half-hourly/i.test(t.kind) ? 'Market' : 'Variable', rateTxt(t) + ((t.known && t.known.length && SC === 'base') ? ' (rise published: ' + monthName(t.known[0].ym) + ' ' + (t.known[0].ratio >= 1 ? '+' : '') + fmt((t.known[0].ratio - 1) * 100, 0) + '%)' : ''), fmt(t.standingP, 1), h + '', pounds(t.proj[h][0]), (m <= 0 ? '-' : '+') + pounds(Math.abs(m)) + ' / m']); });
+    impRows.forEach(function (t) { var h = hOf(t), m = impM(t); irows.push([t.name, fixedOf(t) ? 'Fixed ' + t.term + ' m' : /tracker|agile|half-hourly/i.test(t.kind) ? 'Market' : 'Variable', rateTxt(t) + ((t.known && t.known.length && SC === 'base') ? ' (rise published: ' + monthName(t.known[0].ym) + ' ' + (t.known[0].ratio >= 1 ? '+' : '') + fmt((t.known[0].ratio - 1) * 100, 0) + '%)' : ''), fmt(t.standingP, 1), h + '', pounds(t.proj[h][0]), (m <= 0 ? '-' : '+') + pounds(Math.abs(m)) + ' / m']); });
     table(is, ['Deal', 'Type', 'Unit rate', 'Standing p/day', 'Months', 'Import cost', 'Against current'], irows);
+    var iogHere = rows.some(function (t) { return /intelligent octopus go/i.test(t.name) && !/flux|max|fixed/i.test(t.name); }), iogWhy = [];
+    (rawS.sources || []).forEach(function (d) { (d.watch || []).forEach(function (w) { if (/intelligent/i.test(w.name)) iogWhy.push(w.name + ': ' + w.why); }); });
+    if (!iogHere) ic.appendChild(el('div', { class: 'tfs', style: 'margin-top:8px' }, 'Intelligent Octopus Go is not priced: ' + (iogWhy.length ? iogWhy.slice(0, 2).join('; ') + '.' : 'it was not in Octopus\'s list for your area, and the typed fallback rates were not used.') + (S.blockedCount ? '' : '')));
     out.appendChild(ic);
 
     // ---- 3. export deals ----
@@ -1795,7 +1798,7 @@
   function set(btn, t, label, icon) { btn.setAttribute('data-t', t); if (icon) btn.querySelector('svg').outerHTML = icon; btn.lastChild.textContent = label; }
   var bl = bar.querySelector('button[data-t="log"]'), bt = bar.querySelector('button[data-t="tf"]');
   if (bl) set(bl, 'log', 'Results', icons.money);
-  if (bt) { var shB = bt.cloneNode(true); set(shB, 'sh', 'Summerhouse', icons.sh); shB.setAttribute('aria-selected', 'false'); bt.parentNode.insertBefore(shB, bt.nextSibling); }
+  if (bt) { var shB = bt.cloneNode(true); set(shB, 'sh', 'Summerhouse', icons.sh); shB.setAttribute('aria-selected', 'false'); shB.addEventListener('click', function () { var m = $('moreSheet'); if (m) m.hidden = true; var t = $('tabSh'); if (t) t.click(); window.scrollTo(0, 0); }); bt.parentNode.insertBefore(shB, bt.nextSibling); }
   var order = ['dash', 'log', 'tf', 'car', 'sh', 'more'];
   order.forEach(function (t) { var b = bar.querySelector('button[data-t="' + t + '"]'); if (b) bar.appendChild(b); });
   var sheet = $('moreSheet'); if (sheet) { var s = sheet.querySelector('button[data-t="sh"]'); if (s) s.remove(); }
