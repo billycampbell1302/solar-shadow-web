@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'fb2307d9c0', u = new URL(location.href);
+    var id = 'f8edf783d4', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -304,6 +304,13 @@
   .card { border-radius:18px; }
   .tile { border-radius:18px; }
   .moneyseg { margin:10px 0 0; }
+
+  /* Overhaul v2 stage 2: consistent page headers and headline cards */
+  section > h2 { font-size:22px; letter-spacing:-.01em; margin:18px 0 2px; }
+  .headline { border-left:4px solid var(--accent); }
+  .setgrp { border-radius:16px; }
+  #viewSetup section { margin-top:22px; }
+  #viewSetup section > h2 { font-size:18px; }
 </style>
 </head>
 <body>
@@ -1129,6 +1136,18 @@
     var expTxt = function (t, h) { if (fixedOf(t) && h <= t.term) return 'fixed, no change'; var l = lvlAt(h); return (t.lowP === t.highP ? fmt(t.lowP * l, 1) + 'p' : fmt(t.lowP * l, 1) + 'p to ' + fmt(t.highP * l, 1) + 'p') + (fixedOf(t) ? ' after the fixed term' : ''); };
     var exName = function (t, h) { var i = t.proj[h][5]; return i >= 0 ? S.exNames[i] : ''; };
 
+    // headline answer first
+    (function () {
+      var perM = function (t) { return diffOf(t) / hOf(t); }, best = rows[0];
+      var iog = rows.filter(function (t) { return /intelligent/i.test(t.name || ''); })[0];
+      var hc0 = hOf(best), hd = el('div', { class: 'card headline', style: 'margin-top:10px' });
+      var save = -perM(best);
+      hd.appendChild(el('div', { class: 'sub' }, 'The short answer'));
+      hd.appendChild(el('div', { style: 'font-size:20px;font-weight:650;margin:2px 0' }, save > 0.5 ? best.name + ' would be about ' + pounds(save) + ' a month cheaper than ' + cur.name + '.' : cur.name + ' is already the cheapest we can get.'));
+      hd.appendChild(el('div', { class: 'sub' }, iog ? 'Intelligent Octopus Go: ' + (perM(iog) < -0.5 ? 'about ' + pounds(-perM(iog)) + ' a month cheaper' : perM(iog) > 0.5 ? 'about ' + pounds(perM(iog)) + ' a month dearer' : 'about the same') + ' than ' + cur.name + ', with the cars included. ' + (rows.indexOf(iog) === 0 ? 'It is the best deal.' : 'It is number ' + (rows.indexOf(iog) + 1) + ' of ' + rows.length + '.') : 'Intelligent Octopus Go is not in this scan yet. Press Scan deals now.'));
+      hd.appendChild(el('div', { class: 'sub' }, 'Based on ' + (hc0 > 0 ? 'the next ' + hc0 + ' months' : 'a year') + ' of your real usage' + (mdl && mdl.car ? ' plus the cars' : '') + '. Details below.'));
+      out.appendChild(hd);
+    })();
     // comparison basis
     var bar = el('div', { class: 'daybar', style: 'margin-top:10px;flex-wrap:wrap' }); bar.appendChild(el('span', { class: 'sub' }, 'Compare over:'));
     [['own', 'Each deal\'s own term']].concat(hz.map(function (h) { return [String(h), h + ' months']; })).forEach(function (o) {
