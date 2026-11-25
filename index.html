@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '04a88fa4a6', u = new URL(location.href);
+    var id = '69c055c770', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -449,6 +449,12 @@
     <div class="card scroll" style="margin-top:10px"><div id="fcVerdict" class="sub" style="margin-bottom:6px"></div><table id="tblFc"></table></div>
   </section>
 
+  <section aria-label="Solar accuracy">
+    <h2>Solar forecast against actual</h2>
+    <div class="sub" id="accSum">Loading…</div>
+    <div class="card" style="margin-top:10px"><h2 style="font-size:14px" id="accDay">Half hour by half hour</h2><div class="legend"><span><i style="background:var(--ours)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chAccPv"></div></div>
+    <div class="card scroll" style="margin-top:10px"><h2 style="font-size:14px">Day by day</h2><div id="accRows"></div></div>
+  </section>
   <section aria-label="Quality and learning">
     <div class="grid2">
       <div class="card"><h2>Data quality</h2><ul class="q" id="quality"></ul></div>
@@ -868,6 +874,7 @@
       tip: function (i) { return [{ name: 'Net cost', color: 'var(--solis)', value: cb[i] === null ? '–' : fmt(cb[i], 1) + 'p' }]; } });
     var cheap = pad(P.cheap).map(function (v) { return !!v; });
     lineChart($('chDayPow'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'House used', color: 'var(--solis)', values: pad(P.loadKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 240, label: 'Solar made and house used through the day' });
+    lineChart($('chAccPv'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 220, label: 'Solar made against the forecast' }); (function () { var a = 0, f = 0, nn = 0; for (var q = 0; q < P.pvKw.length; q++) { if (P.pvKw[q] === null || P.pvFcKw[q] === null || P.pvFcKw[q] === undefined) continue; a += P.pvKw[q] * 0.5; f += P.pvFcKw[q] * 0.5; nn++; } $('accDay').textContent = dayLabel(P.date) + (nn ? ': forecast ' + fmt(f, 1) + ' kWh, actual ' + fmt(a, 1) + ' kWh' + (f > 0.2 ? ' (' + Math.abs(Math.round((a - f) / f * 100)) + '% ' + (a >= f ? 'more' : 'less') + ' than forecast)' : '') : ''); })();
     lineChart($('chDayPrice'), { x: x, series: [{ name: 'Pay per unit', color: 'var(--plain)', values: pad(P.impP) }, { name: 'Paid for export', color: 'var(--perfect)', values: pad(P.expP) }], yMin: 0, shade: cheap, yFmt: function (v) { return fmt(v, 1) + 'p'; }, xTickIdx: tk, h: 180, label: 'Import and export price' });
     var imp = pad(P.importKwh), exp = pad(P.exportKwh), ch = pad(P.chargeKwh), dis = pad(P.dischargeKwh);
     var net = imp.map(function (v, i) { return v === null ? null : v - (exp[i] || 0); });
@@ -1026,11 +1033,12 @@
     document.head.appendChild(sc);
   }
   function gs(fn, args, ok, bad) {
+    window.__gs = gs;
     if (window.google && google.script && google.script.run) { var r = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { bad(e && e.message ? e.message : String(e)); }); r[fn].apply(r, args); }
     else if (window.__API__ && window.__API__.url) {
       // Show what this phone saw last time straight away (read-only pages), then replace it with fresh data.
       var ck = null, shown = false;
-      if (/^get(Dashboard|Day|Tariffs|Cars|Activity|Brain|Summerhouse)$/.test(fn)) {
+      if (/^get(Dashboard|Day|Tariffs|Cars|Activity|Brain|Summerhouse|SolarAccuracy)$/.test(fn)) {
         ck = 'c:' + fn + ':' + JSON.stringify(args);
         var fresh = false; try { var raw = localStorage.getItem(ck); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r !== undefined) { shown = true; fresh = fn === 'getDay' && Date.now() - cv.t < (args[1] ? 600e3 : 30e3); setTimeout(function () { ok(cv.r); }, 0); } } } catch (e) {}
         if (fresh && !window.__force) return; // a finished day we fetched in the last 10 minutes: no need to ask the server again
@@ -1231,7 +1239,10 @@
       hd.appendChild(el('div', { style: 'font-size:20px;font-weight:650;margin:2px 0' }, save > 0.5 ? best.name + ' would be about ' + pounds(save) + ' a month cheaper than ' + cur.name + '.' : cur.name + ' is already the cheapest we can get.'));
       hd.appendChild(el('div', { class: 'sub' }, iog ? 'Intelligent Octopus Go: ' + (perM(iog) < -0.5 ? 'about ' + pounds(-perM(iog)) + ' a month cheaper' : perM(iog) > 0.5 ? 'about ' + pounds(perM(iog)) + ' a month dearer' : 'about the same') + ' than ' + cur.name + ', with the cars included. ' + (rows.indexOf(iog) === 0 ? 'It is the best deal.' : 'It is number ' + (rows.indexOf(iog) + 1) + ' of ' + rows.length + '.') : 'Intelligent Octopus Go is not in this scan yet. Press Scan deals now.'));
       var same = rows.filter(function (t) { return !cur.fromOctopus && /\bgo\b/i.test(t.name || '') && !/intelligent|fixed|flex|faster|12m|ev/i.test(t.name || '') && !t.blocked; })[0];
-      if (same && /\bgo\b/i.test(cur.name) && Math.abs(perM(same)) > 0.5) hd.appendChild(el('div', { class: 'sub', style: 'color:var(--ours);margin-top:6px' }, 'Check this: "' + same.name + '" is the same product as your current ' + cur.name + ' but prices ' + pounds(Math.abs(perM(same))) + ' a month ' + (perM(same) < 0 ? 'cheaper' : 'dearer') + '. Octopus publishes it at ' + fmt(same.lowP, 1) + 'p cheap rate, ' + fmt(same.highP, 1) + 'p day rate and ' + fmt(same.standingP, 1) + 'p a day standing charge; the settings file has ' + (cur.rates ? fmt(cur.rates.night, 1) + 'p, ' + fmt(cur.rates.day, 1) + 'p and ' + fmt(cur.rates.standing, 1) + 'p' : 'other figures') + '. One of them is out of date, so treat the ranking with care until they match.'));
+      if (same && /\bgo\b/i.test(cur.name) && Math.abs(perM(same)) > 0.5) {
+        var hh = hOf(same), a = S.curProj[hh], b = same.proj[hh];
+        hd.appendChild(el('div', { class: 'sub', style: 'color:var(--ours);margin-top:6px' }, 'Check this: "' + same.name + '" is the same product as your current ' + cur.name + ', so they should price the same, yet it comes out ' + pounds(Math.abs(perM(same))) + ' a month ' + (perM(same) < 0 ? 'cheaper' : 'dearer') + '. Over ' + hh + ' months, import ' + pounds(a[0]) + ' (current) against ' + pounds(b[0]) + ', export earnings ' + pounds(a[1]) + ' against ' + pounds(b[1]) + '. The difference is in the ' + (Math.abs(a[0] - b[0]) >= Math.abs(a[1] - b[1]) ? 'import side (standing charge, rate window or the car)' : 'export pairing') + ', not the unit rates. Treat the ranking with care until this is explained.'));
+      }
       hd.appendChild(el('div', { class: 'sub' }, 'Based on ' + (hc0 > 0 ? 'the next ' + hc0 + ' months' : 'a year') + ' of your real usage' + (mdl && mdl.car ? ' plus the cars' : '') + '. Details below.'));
       out.appendChild(hd);
     })();
@@ -1661,7 +1672,7 @@
     ['today', 'section[aria-label="Headline"], #kpis, section[aria-label="Today"]'],
     ['plan', 'section[aria-label="Plan"]'],
     ['past', 'section[aria-label="History"], section[aria-label="Solar forecasts"]'],
-    ['accuracy', 'section[aria-label="Quality and learning"], section.how']
+    ['accuracy', 'section[aria-label="Solar accuracy"], section[aria-label="Quality and learning"], section.how']
   ];
   panes.forEach(function (p) { Array.prototype.forEach.call(dash.querySelectorAll(p[1]), function (e) { e.setAttribute('data-pane', p[0]); }); });
   var seg = document.createElement('div'); seg.className = 'seg'; seg.setAttribute('role', 'tablist'); seg.setAttribute('aria-label', 'Overview sections');
@@ -1760,6 +1771,36 @@
     });
   }
   paint();
+})();
+</script>
+
+<script>
+/* Solar accuracy: forecast against actual, day by day */
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function pct(a, f) { return f > 0.2 ? Math.round((a - f) / f * 100) : null; }
+  function render(r) {
+    var days = (r && r.days) || [], box = $('accRows'); if (!box) return; box.textContent = '';
+    if (!days.length) { $('accSum').textContent = 'Waiting for the first day with both readings and a saved forecast.'; return; }
+    var done = days.filter(function (x) { return !x.partial; }), sa = 0, sf = 0;
+    done.forEach(function (x) { sa += x.actual; sf += x.forecast; });
+    var p = pct(sa, sf);
+    $('accSum').textContent = done.length ? 'Over the last ' + done.length + ' finished day' + (done.length === 1 ? '' : 's') + ' the forecast said ' + sf.toFixed(1) + ' kWh and the panels made ' + sa.toFixed(1) + ' kWh' + (p === null ? '.' : ': ' + Math.abs(p) + '% ' + (p >= 0 ? 'more' : 'less') + ' than forecast on the whole.') + ' The forecast is the one made beforehand, not a later correction.' : 'Only today so far. A finished day will appear tomorrow.';
+    var mx = Math.max.apply(null, days.map(function (x) { return Math.max(x.actual, x.forecast); })) || 1;
+    days.slice().reverse().forEach(function (x) {
+      var pc = pct(x.actual, x.forecast), row = document.createElement('div'); row.style.cssText = 'display:grid;grid-template-columns:84px 1fr 120px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--grid);font-size:13.5px';
+      var d = new Date(x.date + 'T12:00:00Z'), nm = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+      var l = document.createElement('div'); l.textContent = nm + (x.partial ? ' (so far)' : '');
+      var bars = document.createElement('div');
+      [['forecast', 'var(--axis)', x.forecast], ['actual', 'var(--ours)', x.actual]].forEach(function (b) { var bb = document.createElement('div'); bb.style.cssText = 'height:7px;border-radius:4px;margin:2px 0;width:' + Math.max(2, b[2] / mx * 100) + '%;background:' + b[1]; bb.title = b[0] + ' ' + b[2].toFixed(1) + ' kWh'; bars.appendChild(bb); });
+      var t = document.createElement('div'); t.style.cssText = 'text-align:right'; t.innerHTML = '<b>' + x.actual.toFixed(1) + '</b> of ' + x.forecast.toFixed(1) + ' kWh' + (pc === null ? '' : '<div class="sub" style="font-size:12px">' + Math.abs(pc) + '% ' + (pc >= 0 ? 'more' : 'less') + '</div>');
+      row.appendChild(l); row.appendChild(bars); row.appendChild(t); box.appendChild(row);
+    });
+    var key = document.createElement('div'); key.className = 'sub'; key.style.marginTop = '6px'; key.textContent = 'Grey bar = forecast, orange = what the panels made. Same half hours only, so a part day is fair.'; box.appendChild(key);
+  }
+  function load() { if (!window.__gs) return setTimeout(load, 800); window.__gs('getSolarAccuracy', [(window.__ACCESS__ || {}).key || ''], render, function (e) { var s = $('accSum'); if (s) s.textContent = 'Could not load: ' + e; }); }
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.seg button'); if (b && /accurate/i.test(b.textContent)) load(); });
+  setTimeout(load, 1500);
 })();
 </script>
 </body>
