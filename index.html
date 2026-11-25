@@ -668,9 +668,9 @@
       function (m) { if (id !== dayReq) return; document.body.classList.remove('dayloading'); $('dayMsg').textContent = 'Could not load that day: ' + m; });
   }
   // Phone site: after a day shows, quietly fetch its neighbours so the arrow buttons feel instant.
-  var pfDone = false;
+  var pfDone = false, pfAt = 0;
   function prefetchDays() {
-    if (pfDone || !(window.__API__ && window.__API__.url) || !dayPack) return; pfDone = true;
+    if (pfDone || !(window.__API__ && window.__API__.url) || !dayPack) return; pfDone = true; pfAt = Date.now();
     var hi = dayPack.maxDate, lo = dayPack.minDate, p = hi.split('-'), dates = [];
     for (var d = 1; d <= 7; d++) { var ds = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] - d)).toISOString().slice(0, 10); if (lo && ds < lo) break; dates.push(ds); }
     if (!dates.length) return;
@@ -893,8 +893,8 @@
       var ck = null, shown = false;
       if (/^get(Dashboard|Day|Tariffs|Cars|Activity|Brain|Summerhouse)$/.test(fn)) {
         ck = 'c:' + fn + ':' + JSON.stringify(args);
-        var fresh = false; try { var raw = localStorage.getItem(ck); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r !== undefined) { shown = true; fresh = fn === 'getDay' && !!args[1] && Date.now() - cv.t < 3600e3; setTimeout(function () { ok(cv.r); }, 0); } } } catch (e) {}
-        if (fresh && !window.__force) return; // a finished day we fetched in the last hour: no need to ask the server again
+        var fresh = false; try { var raw = localStorage.getItem(ck); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r !== undefined) { shown = true; fresh = fn === 'getDay' && !!args[1] && Date.now() - cv.t < 600e3; setTimeout(function () { ok(cv.r); }, 0); } } } catch (e) {}
+        if (fresh && !window.__force) return; // a finished day we fetched in the last 10 minutes: no need to ask the server again
         var ok0 = ok, bad0 = bad;
         ok = function (r) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), r: r })); } catch (e) {} ok0(r); };
         bad = function (m) { if (shown) return; bad0(m); };
@@ -1357,6 +1357,12 @@
     document.addEventListener('touchmove', function (e) { if (y0 === null) return; dy = e.touches[0].clientY - y0; if (dy > 20) { bar.textContent = dy > 80 ? 'Release to refresh' : 'Pull down to refresh'; bar.classList.add('on'); } else bar.classList.remove('on'); }, { passive: true });
     document.addEventListener('touchend', function () { if (y0 !== null && dy > 80) { bar.textContent = 'Refreshing…'; bar.classList.add('on', 'spin'); window.__force = true; try { refreshCurrent(); } finally { window.__force = false; } var waited = 0, iv = setInterval(function () { waited += 300; if ((waited >= 600 && busyN === 0) || waited > 20000) { clearInterval(iv); bar.classList.remove('on', 'spin'); } }, 300); } else bar.classList.remove('on'); y0 = null; dy = 0; }, { passive: true });
   })();
+  // coming back to the app after a while: refresh the dashboard, today and the saved recent days
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState !== 'visible' || !(window.__API__ && window.__API__.url)) return;
+    if (Date.now() - pfAt < 5 * 60e3) return;
+    pfDone = false; try { load(); } catch (e) {} try { prefetchDays(); } catch (e) {}
+  });
   // App version pill (owner only): is the running code the newest on GitHub?
   var verTxt = '';
   function checkVersion() {
