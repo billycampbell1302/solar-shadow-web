@@ -830,11 +830,16 @@
     if (window.google && google.script && google.script.run) { var r = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { bad(e && e.message ? e.message : String(e)); }); r[fn].apply(r, args); }
     else if (window.__API__ && window.__API__.url) {
       // static phone site: same calls over HTTPS (text/plain keeps it a simple request, so no CORS preflight)
-      var done = false, to = setTimeout(function () { if (!done) { done = true; bad('Timed out. Check your connection and pull down to refresh.'); } }, 90000);
-      fetch(window.__API__.url, { method: 'POST', redirect: 'follow', body: JSON.stringify({ fn: fn, args: args, o: window.__API__.owner || '' }) })
-        .then(function (r) { return r.json(); })
-        .then(function (j) { if (done) return; done = true; clearTimeout(to); if (j && j.ok) ok(j.r); else bad((j && j.e) || 'The server said no'); })
-        .catch(function (e) { if (done) return; done = true; clearTimeout(to); bad('Could not reach the server (' + (e && e.message ? e.message : e) + ')'); });
+      var done = false, tries = 0, to = setTimeout(function () { if (!done) { done = true; bad('Timed out. Check your connection and pull down to refresh.'); } }, 90000);
+      (function go() {
+        tries++;
+        fetch(window.__API__.url, { method: 'POST', redirect: 'follow', cache: 'no-store', body: JSON.stringify({ fn: fn, args: args, o: window.__API__.owner || '' }) })
+          .then(function (r) { return r.text(); })
+          .then(function (t) { if (done) return; var j = null; try { j = JSON.parse(t); } catch (e) {}
+            if (!j) { done = true; clearTimeout(to); bad('The server sent something unexpected: ' + String(t).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 120)); return; }
+            done = true; clearTimeout(to); if (j.ok) ok(j.r); else bad(j.e || 'The server said no'); })
+          .catch(function (e) { if (done) return; if (tries < 3) { setTimeout(go, 1500 * tries); return; } done = true; clearTimeout(to); bad('Could not reach the server after 3 tries (' + (e && e.name ? e.name + ': ' : '') + (e && e.message ? e.message : e) + ')'); });
+      })();
     }
     else if (window.__SETUP__ && window.__SETUP__[fn]) ok(window.__SETUP__[fn].apply(null, args)); else bad('not available here');
   }
