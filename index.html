@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '38eefaaa84', u = new URL(location.href);
+    var id = 'd23011257b', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1141,6 +1141,7 @@
     if (S.sources && S.sources.length) {
       var ds = S.sources.map(function (d) { return d.label + ': ' + (d.priced ? d.priced + ' deals priced' + (d.older ? ' (' + d.older + ' older versions ignored)' : '') : d.error ? 'not available (' + d.error + ')' : 'no deals priced') + (d.priced === 0 && d.label !== 'Octopus' && S.trackerRows ? ', using Tariff Tracker figures instead' : ''); });
       out.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Sources: ' + ds.join(' · ') + '.'));
+      S.sources.forEach(function (d) { (d.watch || []).forEach(function (w) { out.appendChild(el('div', { class: 'sub', style: 'margin-top:2px' }, 'Octopus listing, ' + w.name + ' (' + w.code + '): ' + w.why + '.')); }); });
     }
 
     // saving per month, every deal on its own basis
