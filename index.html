@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '16df96e418', u = new URL(location.href);
+    var id = 'f79ebca776', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1242,10 +1242,10 @@
     if (!S) { out.appendChild(el('div', { class: 'empty' }, TF.owner ? 'No scan yet. Press "Scan deals now".' : 'No scan yet. The owner needs to run one.')); return; }
     if (!(S.v >= 3)) { out.appendChild(el('div', { class: 'card', style: 'margin-top:10px;border-color:var(--ours)' }, 'This scan was made before the 12, 18 and 24 month comparison, the export pairing and the filter for deals we cannot get. ' + (TF.owner ? 'Press "Scan deals now" to get the full picture.' : 'The owner needs to scan again.'))); return; }
     // what-if price rise: swap in the projections computed for that rise (no spread, one clear number)
-    var SC = window.TFSCEN || 'base', rawS = S;
-    if (SC !== 'base' && S.curScen && S.curScen[SC]) {
-      var mix = function (base, sc) { var o = {}; Object.keys(base).forEach(function (h) { var s = sc && sc[h]; o[h] = s ? [s[0], s[1], s[2], s[2], s[2], base[h][5]] : base[h]; }); return o; };
-      S = Object.assign({}, rawS, { curProj: mix(rawS.curProj, rawS.curScen[SC]), tariffs: rawS.tariffs.map(function (t) { return t.scen && t.scen[SC] ? Object.assign({}, t, { proj: mix(t.proj, t.scen[SC]) }) : t; }) });
+    var SC = window.TFSCEN || 'base', rawS = S, carDef = (S.model && S.model.carsDefault) || 0, NC = window.TFCARS === undefined || window.TFCARS === null ? carDef : window.TFCARS;
+    if (S.curScenC && S.curScenC[NC] && (SC !== 'base' || NC !== carDef)) {
+      var mix = function (base, sc) { var o = {}; Object.keys(base).forEach(function (h) { var s = sc && sc[h]; o[h] = s ? [s[0], s[1], s[2], s[2], s[2], base[h][5], base[h][6]] : base[h]; }); return o; };
+      S = Object.assign({}, rawS, { curProj: mix(rawS.curProj, rawS.curScenC[NC][SC]), tariffs: rawS.tariffs.map(function (t) { return t.scenC && t.scenC[NC] && t.scenC[NC][SC] ? Object.assign({}, t, { proj: mix(t.proj, t.scenC[NC][SC]) }) : t; }) });
     }
     var only = $('tfOnlyOk').checked, hz = S.horizons, cur = S.current, mdl = S.model, age = Math.round((Date.now() - S.made) / 3600e3);
     var all = S.tariffs.filter(function (t) { return !(only && t.blocked); }), left = S.tariffs.filter(function (t) { return t.blocked; });
@@ -1254,8 +1254,9 @@
     var hOf = function (t) { if (TFMODE === 'own') { if (fixedOf(t)) { var h = Math.min(36, Math.round(t.term)); return hz.indexOf(h) >= 0 ? h : 12; } return 12; } return +TFMODE; };
     var diffOf = function (t) { var h = hOf(t); return t.proj[h][2] - S.curProj[h][2]; };
     var rows = all.slice().sort(function (a, b) { return diffOf(a) / hOf(a) - diffOf(b) / hOf(b); });
-    var lvlAt = function (h) { return mdl.path[Math.min(h, mdl.path.length) - 1] || 1; };
-    var stepI = -1; mdl.path.forEach(function (v, i) { if (stepI < 0 && v > 1.001) stepI = i; });
+    var pathAt = function (i) { if (SC === 'base') return mdl.path[i] || 1; return mdl.months[i] && mdl.months[i][0] >= '2027-01' ? 1 + (+SC) / 100 : 1; };
+    var lvlAt = function (h) { return pathAt(Math.min(h, mdl.months.length) - 1); };
+    var stepI = -1; mdl.months.forEach(function (m, i) { if (stepI < 0 && pathAt(i) > 1.001) stepI = i; });
     var stepM = stepI >= 0 ? mdl.months[stepI][0] : '';
     var monthName = function (ym) { var p = ym.split('-'); return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+p[1] - 1] + ' ' + p[0]; };
     var rateTxt = function (t) { return t.lowP === t.highP ? fmt(t.lowP, 1) + 'p' : fmt(t.lowP, 1) + 'p to ' + fmt(t.highP, 1) + 'p'; };
@@ -1296,6 +1297,7 @@
     };
     crow('Compare over', [['own', 'Own term']].concat(hz.map(function (h) { return [String(h), h + ' months']; })), TFMODE, function (v) { TFMODE = v; });
     if (rawS.whatIf && rawS.curScen) crow('Prices from January', [['base', 'Forecast']].concat(rawS.whatIf.map(function (L) { return [String(L), L === 0 ? 'No rise' : '+' + L + '%']; })), SC, function (v) { window.TFSCEN = v; });
+    crow('Cars charging here', [['0', 'No cars'], ['1', '1 car'], ['2', '2 cars']], String(NC), function (v) { window.TFCARS = +v; });
     out.appendChild(ctl);
 
     // ---- 2. import deals ----
@@ -1304,7 +1306,7 @@
     ic.appendChild(el('div', { class: 'tfs' }, 'What your real half-hour grid purchases would cost. Cost is over the months shown; the last column is against your current deal.')); ic.appendChild(is);
     var curRates = cr ? fmt(cr.night, 1) + 'p night · ' + fmt(cr.day, 1) + 'p day' : 'not set';
     var irows = [['Your current: ' + cur.name, 'Variable', curRates, fmt(cr && cr.standing, 1), hc + '', pounds(cp[0]), '–']];
-    impRows.slice(0, 14).forEach(function (t) { var h = hOf(t), m = impM(t); irows.push([t.name, fixedOf(t) ? 'Fixed ' + t.term + ' m' : /tracker|agile|half-hourly/i.test(t.kind) ? 'Market' : 'Variable', rateTxt(t), fmt(t.standingP, 1), h + '', pounds(t.proj[h][0]), (m <= 0 ? '-' : '+') + pounds(Math.abs(m)) + ' / m']); });
+    impRows.slice(0, 14).forEach(function (t) { var h = hOf(t), m = impM(t); irows.push([t.name, fixedOf(t) ? 'Fixed ' + t.term + ' m' : /tracker|agile|half-hourly/i.test(t.kind) ? 'Market' : 'Variable', rateTxt(t) + ((t.known && t.known.length && SC === 'base') ? ' (rise published: ' + monthName(t.known[0].ym) + ' ' + (t.known[0].ratio >= 1 ? '+' : '') + fmt((t.known[0].ratio - 1) * 100, 0) + '%)' : ''), fmt(t.standingP, 1), h + '', pounds(t.proj[h][0]), (m <= 0 ? '-' : '+') + pounds(Math.abs(m)) + ' / m']); });
     table(is, ['Deal', 'Type', 'Unit rate', 'Standing p/day', 'Months', 'Import cost', 'Against current'], irows);
     out.appendChild(ic);
 
@@ -1339,21 +1341,32 @@
 
     // ---- 5. what this scan is based on ----
     var age2 = Math.round((Date.now() - S.made) / 60000), srcTxt = (S.sources || []).map(function (d) { return d.label + ' ' + (d.priced || 0); }).join(', ');
+    function ck0() { return rawS.curKnown && rawS.curKnown.length; }
     var kv = [
       ['Usage', dayLabel(S.from) + ' to ' + dayLabel(S.to) + ', ' + S.days + ' full days, ' + fmt(S.kwh, 0) + ' kWh bought'],
       ['Area', S.region],
       ['Current deal', cur.name + (cur.fromOctopus ? ' (from your Octopus account)' : ' (typed in settings)')],
       ['House model', mdl.daysObserved + ' days recorded, ' + mdl.monthsReal + ' of 12 months real'],
-      ['Price outlook', stepM ? '+' + Math.round((lvlAt(12) - 1) * 100) + '% from ' + monthName(stepM) + (SC !== 'base' ? ' (what-if ' + (SC === '0' ? 'no rise' : '+' + SC + '%') + ')' : '') : 'no change'],
+      ['Price outlook', ck0() && SC === 'base' ? 'published by Octopus: ' + monthName(rawS.curKnown[0].ym) + ' ' + (rawS.curKnown[0].ratio >= 1 ? '+' : '') + fmt((rawS.curKnown[0].ratio - 1) * 100, 1) + '%' : stepM ? '+' + Math.round((lvlAt(12) - 1) * 100) + '% from ' + monthName(stepM) + (SC !== 'base' ? ' (what-if ' + (SC === '0' ? 'no rise' : '+' + SC + '%') + ')' : '') : 'no change'],
       ['Export', (mdl.cap || '–') + ' kWh/day limit, ' + (S.exportMode === 'estimated' ? 'not approved, modelled' : 'real exports')],
       ['Battery selling', fmt(kwA, 0) + ' kWh over ' + hc + ' months, 90% round trip, 3p wear'],
-      ['Electric cars', mdl.car ? fmt(mdl.car, 1) + ' kWh a day counted' : 'not counted yet'],
+      ['Electric cars', NC > 0 && mdl.carOpts ? NC + (NC === 1 ? ' car, ' : ' cars, ') + fmt(mdl.carOpts[NC], 1) + ' kWh a day' : 'none counted'],
       ['Deals priced', srcTxt || '–'],
       ['Scanned', (age2 < 60 ? age2 + ' min' : Math.round(age2 / 60) + ' h') + ' ago' + (S.seconds ? ', took ' + S.seconds + 's' : '') + (S.build ? ', build ' + S.build : '')]
     ];
     var bc = el('div', { class: 'card', style: 'margin-top:10px' }); bc.appendChild(el('h2', { style: 'font-size:15px' }, 'What this scan is based on'));
     var kg = el('div', { class: 'tfkv' }); kv.forEach(function (r) { var d = el('div', { class: 'tfk' }); d.appendChild(el('div', { class: 'tfl' }, r[0])); d.appendChild(el('div', { class: 'tfkv1' }, r[1])); kg.appendChild(d); }); bc.appendChild(kg);
     out.appendChild(bc);
+    var oc = el('div', { class: 'card', style: 'margin-top:10px' }), os = el('div', { class: 'scroll' });
+    oc.appendChild(el('h2', { style: 'font-size:15px' }, 'Predicted price change, next 12 months'));
+    var ol = rawS.outlook, ck = rawS.curKnown || [];
+    oc.appendChild(el('div', { class: 'tfs' }, 'Variable and market deals move with the price cap; fixed deals hold until their term ends.' + (SC !== 'base' ? ' Showing the what-if you picked, which replaces the forecast.' : ck.length ? ' ' + cur.name + ' already has a rise published by Octopus (' + ck.map(function (k) { return monthName(k.ym) + ' ' + (k.ratio >= 1 ? '+' : '') + fmt((k.ratio - 1) * 100, 1) + '%'; }).join(', ') + '), so those published prices are used rather than the forecast, and only forecast changes after that date are added.' : ' Octopus has not published a change for ' + cur.name + ' yet, so the cap forecast is used.')));
+    if (ol && ol.rows && ol.rows.length && SC === 'base') ol.rows.forEach(function (r) { oc.appendChild(el('div', { class: 'tfs', style: 'margin-top:2px' }, monthName(r.ym) + ': ' + (r.pct >= 0 ? '+' : '') + fmt(r.pct, 1) + '% against today. ' + r.note.replace(/^Auto: /, ''))); });
+    if (ol && ol.at) oc.appendChild(el('div', { class: 'tfs', style: 'margin-top:2px' }, 'Cap forecast checked ' + new Intl.DateTimeFormat('en-GB', { timeZone: TZ, day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(ol.at)) + ' and again with every daily scan.'));
+    oc.appendChild(os);
+    var orows = mdl.months.slice(0, 12).map(function (m, i) { var lv = pathAt(i); return [monthName(m[0]), (lv >= 1 ? '+' : '') + Math.round((lv - 1) * 100) + '%', cr ? fmt(cr.night * lv, 1) + 'p' : '–', cr ? fmt(cr.day * lv, 1) + 'p' : '–', cr && cr.standing ? fmt(cr.standing * lv, 1) + 'p' : '–', fmt(m[1], 1) + ' kWh']; });
+    table(os, ['Month', 'Price vs today', 'Your night rate', 'Your day rate', 'Standing charge/day', 'Grid import a day'], orows);
+    out.appendChild(oc);
     if (S.sources && S.sources.length) {
       var nd = el('details', { class: 'setgrp', style: 'margin-top:10px' }), nb = el('div', { class: 'body' }); nd.appendChild(el('summary', null, 'Deals not priced and why')); nd.appendChild(nb);
       S.sources.forEach(function (d) { nb.appendChild(el('div', { class: 'sub', style: 'margin:4px 0' }, d.label + ': ' + (d.priced ? d.priced + ' priced' + (d.older ? ', ' + d.older + ' older versions ignored' : '') : d.error ? 'not available (' + d.error + ')' : 'none priced'))); (d.watch || []).forEach(function (w) { nb.appendChild(el('div', { class: 'sub', style: 'margin:2px 0' }, w.name + ' (' + w.code + '): ' + w.why)); }); });
