@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '4a319e9539', u = new URL(location.href);
+    var id = 'eca9dd0e47', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1383,7 +1383,7 @@
       if (!L) return;
       var hd = el('div', { class: 'card headline', id: 'shHead', style: 'margin-top:10px' }), outT = L.out === null || L.out === undefined ? '' : ' Outside it is ' + fmt(L.out, 1) + '°C.';
       hd.appendChild(el('div', { class: 'sub' }, 'Right now'));
-      hd.appendChild(el('div', { style: 'font-size:20px;font-weight:650;margin:2px 0' }, 'The summerhouse is ' + fmt(L.temp, 1) + '°C and the heater is ' + (L.heating === null ? 'not reporting' : L.heating ? 'on' : 'off') + '.'));
+      hd.appendChild(el('div', { style: 'font-size:20px;font-weight:650;margin:2px 0' }, 'The summerhouse is ' + fmt(L.temp, 1) + '°C and the heater is ' + (L.heating === null ? 'unknown (not enough readings yet)' : L.heating ? 'on' : 'off') + '.'));
       hd.appendChild(el('div', { class: 'sub' }, 'Read ' + ago(L.ageMin) + '.' + outT));
       $('shNow').parentNode.insertBefore(hd, $('shNow'));
     })();
@@ -1392,7 +1392,7 @@
       stat('Inside now', fmt(L.temp, 1) + '°C', 'Read ' + ago(L.ageMin));
       var fw = (S.forecast || [])[0];
       stat('Outside now', L.out === null ? '–' : fmt(L.out, 1) + '°C', fw ? 'Wind ' + fmt(fw[2], 1) + ' m/s' + (fw[4] !== null && fw[4] !== undefined ? ' from the ' + COMPASS[dirQuad(fw[4])] : '') + ' · sun ' + Math.round(fw[3] || 0) + ' W/m²' + (fw[5] ? ' · rain ' + fmt(fw[5], 1) + ' mm/h' : '') : '');
-      stat('Heater', L.heating === null ? 'Unknown' : L.heating ? 'Heating' : 'Not heating', L.power !== null ? Math.round(L.power) + ' W' : 'Not reported. Judged from the room temperature against the set temperature');
+      stat('Heater', L.heating === null ? 'Unknown' : L.heating ? 'Heating' : 'Not heating', L.power !== null ? Math.round(L.power) + ' W' : 'Not reported by the heater. Worked out from whether the room is warming faster than the weather alone would');
     } else stat('Inside now', '–', 'No readings yet. One is saved with each inverter read (every 10 minutes).');
     var ser = S.series || [], xs = ser.map(function (r) { return hhmm(r[0]); }), ticks = [], seen = {};
     ser.forEach(function (r, i) { var h = Number(hhmm(r[0]).slice(0, 2)), m = Number(hhmm(r[0]).slice(3)); var step = (window.innerWidth || 800) < 560 ? 12 : 6, bk = Math.floor(r[0] / (step * 3600e3)); if (h % step === 0 && m < 10 && !seen[bk]) { seen[bk] = 1; ticks.push(i); } });
