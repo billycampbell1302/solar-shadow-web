@@ -211,6 +211,17 @@
     .sheet { background:var(--surface); border-radius:20px 20px 0 0; }
     .hero .num { font-size:40px; }
   }
+  /* day picker: one tidy row  < date >  Today */
+  .daybar { display:grid !important; grid-template-columns:44px minmax(0,1fr) 44px auto; gap:8px; align-items:stretch; overflow:visible !important; padding:2px 0 4px !important; }
+  .daybar > * { flex:none; min-width:0; }
+  .daybar .dstep { font-size:26px; line-height:1; padding:0; min-height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+  .daybar .dtoday { min-height:44px; border-radius:12px; padding:0 16px; font-weight:600; }
+  .daybar input[type=date] { min-height:44px !important; width:100%; box-sizing:border-box; text-align:center; font-size:16px; font-weight:600; border-radius:12px !important; -webkit-appearance:none; appearance:none; }
+  .daybar .sub { grid-column:1 / -1; min-height:0; }
+  .daybar .sub:empty { display:none; }
+  .daybar button:disabled { opacity:.35; }
+  #dayNotes, #chToday, #chDayPow, #chDayPrice, #chDayGrid, #chDayBatt { transition:opacity .15s; }
+  .dayloading #dayNotes, .dayloading #chToday, .dayloading #chDayPow, .dayloading #chDayPrice, .dayloading #chDayGrid, .dayloading #chDayBatt { opacity:.4; }
 </style>
 </head>
 <body>
@@ -236,10 +247,10 @@
   <section aria-label="Today">
     <h2 id="todayH">Today so far</h2>
     <div class="daybar" role="group" aria-label="Choose a day">
-      <button class="btn" id="dayPrev" aria-label="Previous day">&larr; Earlier</button>
+      <button class="btn dstep" id="dayPrev" aria-label="Previous day">&lsaquo;</button>
       <input type="date" id="dayDate" aria-label="Day to show">
-      <button class="btn" id="dayNext" aria-label="Next day">Later &rarr;</button>
-      <button class="btn" id="dayToday">Today</button>
+      <button class="btn dstep" id="dayNext" aria-label="Next day">&rsaquo;</button>
+      <button class="btn dtoday" id="dayToday">Today</button>
       <span class="sub" id="dayMsg"></span>
     </div>
     <div class="daynote" id="dayNotes"></div>
@@ -627,9 +638,17 @@
   // ---- day details: half-hour charts, notes, hour table, date controls
   function dayKey() { return (window.__ACCESS__ || {}).key || ''; }
   function loadDay(ds) {
-    selDate = ds; var id = ++dayReq; $('dayMsg').textContent = 'Loading…';
-    gs('getDay', [dayKey(), ds || ''], function (p) { if (id !== dayReq) return; dayPack = p; if (!ds) selDate = null; $('dayMsg').textContent = ''; renderDay(); },
-      function (m) { if (id !== dayReq) return; $('dayMsg').textContent = 'Could not load that day: ' + m; });
+    selDate = ds; var id = ++dayReq; $('dayMsg').textContent = ''; document.body.classList.add('dayloading');
+    gs('getDay', [dayKey(), ds || ''], function (p) { if (id !== dayReq) return; dayPack = p; if (!ds) selDate = null; $('dayMsg').textContent = ''; document.body.classList.remove('dayloading'); renderDay(); prefetchDays(); },
+      function (m) { if (id !== dayReq) return; document.body.classList.remove('dayloading'); $('dayMsg').textContent = 'Could not load that day: ' + m; });
+  }
+  // Phone site: after a day shows, quietly fetch its neighbours so the arrow buttons feel instant.
+  var pfDays = {};
+  function prefetchDays() {
+    if (!(window.__API__ && window.__API__.url) || !dayPack) return;
+    var cur = dayPack.date, lo = dayPack.minDate, hi = dayPack.maxDate, p = cur.split('-'), todo = [];
+    [-1, 1, -2, -3].forEach(function (d) { var ds = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + d)).toISOString().slice(0, 10); if ((lo && ds < lo) || (hi && ds > hi) || pfDays[ds]) return; pfDays[ds] = 1; todo.push(ds === hi ? '' : ds); });
+    (function next() { var a = todo.shift(); if (a === undefined) return; gs('getDay', [dayKey(), a], function () { setTimeout(next, 250); }, function () { setTimeout(next, 250); }); })();
   }
   function shiftDay(delta) {
     var cur = (dayPack && dayPack.date) || (D.today && D.today.date); if (!cur) return;
