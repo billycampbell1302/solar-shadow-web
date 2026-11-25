@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '5ba237a129', u = new URL(location.href);
+    var id = '30f4b98aed', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1468,9 +1468,9 @@
     try {
       gs('getAppVersion', [], function (v) {
         pill.hidden = false; pill.className = 'pill ver ' + (v.state === 'current' ? 'ok' : v.state === 'pending' ? 'pend' : '');
-        pill.textContent = v.state === 'current' ? 'Up to date' : v.state === 'pending' ? 'Update pending' : 'Version unknown';
-        verTxt = v.state === 'current' ? 'Running version ' + v.live + ' (built ' + v.liveTime + '). It is the newest code on GitHub.'
-          : v.state === 'pending' ? 'Running ' + v.live + ' (built ' + v.liveTime + '); newer code on GitHub is ' + v.latest + (v.latestTime ? ' (built ' + v.latestTime + ')' : '') + '. In Apps Script: Deploy, Manage deployments, Edit, New version, Deploy.'
+        var bno = v.liveNo && v.liveNo !== '__BUILD_NO__' ? 'Build ' + v.liveNo + ' · ' : ''; pill.textContent = bno + (v.state === 'current' ? 'latest' : v.state === 'pending' ? 'update on its way' : 'version unknown');
+        verTxt = v.state === 'current' ? 'Running build ' + (v.liveNo || '?') + ' (' + v.live + ', built ' + v.liveTime + '). It is the newest code on GitHub.'
+          : v.state === 'pending' ? 'Running build ' + (v.liveNo || '?') + ' (built ' + v.liveTime + '). GitHub has build ' + (v.latestNo || v.latest) + (v.latestTime ? ' (built ' + v.latestTime + ')' : '') + '. It deploys by itself within a minute or two of a push; reload to check.'
           : (v.note || 'Could not tell.') + ' Running version ' + v.live + '.';
       }, function (e) { pill.hidden = false; pill.className = 'pill ver'; pill.textContent = 'Version unknown'; verTxt = 'Could not check: ' + e; });
     } finally { window.__quiet = false; }
