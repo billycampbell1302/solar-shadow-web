@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '9bfac1664c', u = new URL(location.href);
+    var id = '3020453e35', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1108,7 +1108,7 @@
       c.appendChild(ls); grid.appendChild(c);
     });
     out.appendChild(grid);
-    var cc = el('div', { class: 'sub', style: 'margin-top:6px' }, 'Based on ' + dayLabel(S.from) + ' to ' + dayLabel(S.to) + ' of real purchases (' + S.days + ' full days) projected forward with a seasonal model, ' + S.region + '. Scanned ' + (age < 1 ? 'less than an hour' : age < 48 ? age + ' hours' : Math.round(age / 24) + ' days') + ' ago. Current deal: ' + cur.name + '.');
+    var cc = el('div', { class: 'sub', style: 'margin-top:6px' }, 'Based on ' + dayLabel(S.from) + ' to ' + dayLabel(S.to) + ' of real purchases (' + S.days + ' full days) projected forward with a seasonal model, ' + S.region + '. Scanned ' + (age < 1 ? 'less than an hour' : age < 48 ? age + ' hours' : Math.round(age / 24) + ' days') + ' ago. Current deal: ' + cur.name + '.' + (S.model && S.model.car > 0 ? ' Electric cars: ' + fmt(S.model.car, 1) + ' kWh a day charged in each deal\'s cheapest four hours (from the car settings in Setup).' : ' No electric car is counted yet, so Intelligent Go cannot show its advantage.'));
     out.appendChild(cc);
     if (S.sources && S.sources.length) {
       var ds = S.sources.map(function (d) { return d.label + ': ' + (d.priced ? d.priced + ' deals priced' + (d.older ? ' (' + d.older + ' older versions ignored)' : '') : d.error ? 'not available (' + d.error + ')' : 'no deals priced') + (d.priced === 0 && d.label !== 'Octopus' && S.trackerRows ? ', using Tariff Tracker figures instead' : ''); });
