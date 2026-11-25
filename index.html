@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'f8edf783d4', u = new URL(location.href);
+    var id = '19c235e70d', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1169,7 +1169,7 @@
       c.appendChild(s);
     }
     var ccard = el('div', { class: 'card', style: 'margin-top:10px' });
-    ccard.appendChild(el('div', { class: 'sub' }, 'YOUR CURRENT TARIFF (what everything below is compared with)'));
+    ccard.appendChild(el('div', { class: 'sub' }, 'YOUR CURRENT TARIFF (what everything below is compared with)' + (cur.fromOctopus ? ' · read from your Octopus account' + (cur.tariffCode ? ' (' + cur.tariffCode + ')' : '') : ' · typed in the settings file: add the Octopus key and MPAN in Setup to read it automatically')));
     ccard.appendChild(el('div', { style: 'font-size:17px;font-weight:650;margin:2px 0' }, cur.name));
     sect(ccard, 'Import: what you pay', [
       cr ? 'Cheap rate ' + fmt(cr.night, 2) + 'p per kWh from ' + cr.from + ' to ' + cr.to + ', day rate ' + fmt(cr.day, 2) + 'p per kWh' + (cr.standing ? ', standing charge ' + fmt(cr.standing, 1) + 'p a day.' : '.') : 'Rates not set in Config.',
