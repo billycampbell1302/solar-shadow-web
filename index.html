@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'a6afee00cb', u = new URL(location.href);
+    var id = '6675d0b080', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -959,6 +959,7 @@
       { t: 'Past days', n: ['solisHistoryLoad', 'octopusDaysLoad'], need: null },
       { t: 'Forecasts and prices', n: ['solcastFetch', 'checkRates', 'scoreToday'] },
       { t: 'Predbat replay', n: ['pushPredbatInputs', 'pullPredbat'], need: 'GITHUB_TOKEN' },
+      { t: 'Tapo plugs', n: ['tapoProbe'], need: 'TAPO_PASSWORD' },
       { t: 'Summerhouse heater', n: ['tuyaLoginStart', 'tuyaLoginFinish', 'tuyaListDevices', 'summerhouseTest', 'summerhouseCapabilities', 'summerhouseRefresh'], need: 'TUYA_USER_CODE' }];
     var shown = {};
     GROUPS.forEach(function (gr) {
