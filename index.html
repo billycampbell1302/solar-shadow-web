@@ -236,16 +236,23 @@
   .pill.ver.ok { border-color:var(--perfect); color:var(--ink); }
   .pill.ver.pend { border-color:#e8a317; color:var(--ink); }
   #verNote { margin:6px 0 0; }
+  /* the status pills always sit on one line */
+  .pills { display:flex; flex-wrap:nowrap; align-items:center; gap:6px; width:100%; min-width:0; overflow:hidden; }
+  .pills .pill { flex:0 0 auto; }
+  @media (max-width:470px) { .pills { gap:4px; } .pills .pill { font-size:11px !important; padding:3px 7px !important; } }
+  @media (max-width:360px) { .pills .pill { font-size:10px !important; padding:2px 6px !important; } }
 </style>
 </head>
 <body>
 <div class="wrap" id="main">
   <header>
     <h1>Solar shadow run</h1>
-    <span class="pill lock" title="Nothing on this page, or in this software, sends anything to the inverter">Read-only</span>
-    <span class="pill" id="tariff">–</span>
-    <span class="pill" id="fresh">Loading…</span>
-    <span class="pill ver" id="verPill" role="button" tabindex="0" hidden>Version…</span>
+    <div class="pills">
+      <span class="pill lock" title="Nothing on this page, or in this software, sends anything to the inverter">Read-only</span>
+      <span class="pill" id="tariff">–</span>
+      <span class="pill" id="fresh">Loading…</span>
+      <span class="pill ver" id="verPill" role="button" tabindex="0" hidden>Version…</span>
+    </div>
   </header>
   <div class="sub" id="verNote" hidden></div>
   <nav class="tabs" role="tablist"><button role="tab" id="tabDash" aria-selected="true">Dashboard</button><button role="tab" id="tabLog" aria-selected="false">Daily log</button><button role="tab" id="tabAct" aria-selected="false">Activity</button><button role="tab" id="tabBr" aria-selected="false">Our software</button><button role="tab" id="tabTf" aria-selected="false">Tariffs</button><button role="tab" id="tabCar" aria-selected="false">Cars</button><button role="tab" id="tabSh" aria-selected="false">Summerhouse</button><button role="tab" id="tabSetup" aria-selected="false">Setup</button></nav>
@@ -1301,7 +1308,7 @@
     if (d.setupDone === false) { var b0 = el('div', { class: 'banner' }); b0.appendChild(el('span', { class: 'ic' }, '!')); var sp = el('span', null, 'Setup is not finished, so there is no live data yet. '); if (ACC.owner) { var lk = el('a', { href: '#' }, 'Open Setup'); lk.addEventListener('click', function (e) { e.preventDefault(); showTab('setup'); }); sp.appendChild(lk); } b0.appendChild(sp); $('banners').appendChild(b0); }
     if (d.sample) banner('sample', '!', 'SAMPLE DATA. These numbers are synthetic and only show the layout. Nothing here is Dad\'s real result.');
     $('tariff').textContent = d.tariff || '–';
-    $('fresh').textContent = d.live ? 'Updated ' + ago(d.live.ageMin) : 'No readings yet';
+    $('fresh').textContent = d.live ? (window.matchMedia && matchMedia('(max-width:470px)').matches ? '' : 'Updated ') + ago(d.live.ageMin) : 'No readings yet';
     $('exportState').textContent = d.exportEnabled ? 'on' : 'off';
     renderHero(); renderKpis(); renderToday(); if (!dayPack || !selDate) loadDay(selDate); else renderDay(); renderPlan(); renderHistory(); renderLog(); renderForecast(); renderQuality(); renderLearn();
     $('foot').textContent = 'Generated ' + new Intl.DateTimeFormat('en-GB', { timeZone: TZ, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(d.generated)) + '. Refreshes every 5 minutes.';
