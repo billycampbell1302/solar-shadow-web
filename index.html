@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'abcfc10773', u = new URL(location.href);
+    var id = 'b51847f0b4', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1067,6 +1067,7 @@
     if (!(S.v >= 3)) { out.appendChild(el('div', { class: 'card', style: 'margin-top:10px;border-color:var(--ours)' }, 'This scan was made before the 12, 18 and 24 month comparison, the export pairing and the filter for deals we cannot get. ' + (TF.owner ? 'Press "Scan deals now" to get the full picture.' : 'The owner needs to scan again.'))); return; }
     var only = $('tfOnlyOk').checked, hz = S.horizons, cur = S.current, mdl = S.model, age = Math.round((Date.now() - S.made) / 3600e3);
     var all = S.tariffs.filter(function (t) { return !(only && t.blocked); }), left = S.tariffs.filter(function (t) { return t.blocked; });
+    var typeOf = function (t) { return fixedOf(t) ? 'FIXED ' + t.term + ' months' : /tracker|agile|half-hourly/i.test(t.kind) ? 'VARIABLE (follows the market)' : 'VARIABLE (price can change)'; };
     var fixedOf = function (t) { return t.term > 0 && !t.variable && !/tracker|agile|half-hourly/i.test(t.kind); };
     var hOf = function (t) { if (TFMODE === 'own') { if (fixedOf(t)) { var h = Math.min(36, Math.round(t.term)); return hz.indexOf(h) >= 0 ? h : 12; } return 12; } return +TFMODE; };
     var diffOf = function (t) { var h = hOf(t); return t.proj[h][2] - S.curProj[h][2]; };
@@ -1094,7 +1095,7 @@
     picks.forEach(function (pk) {
       var t = pk[1], h = hOf(t), p = t.proj[h], d = diffOf(t), c = el('div', { class: 'card' });
       c.appendChild(el('div', { class: 'sub' }, pk[0] + ' (' + h + ' months)'));
-      c.appendChild(el('div', { style: 'font-size:16px;font-weight:650;margin:2px 0' }, t.name));
+      c.appendChild(el('div', { style: 'font-size:16px;font-weight:650;margin:2px 0' }, t.name)); c.appendChild(el('div', { class: 'sub' }, typeOf(t) + (t.code ? ' · ' + t.code : '')));
       if (exName(t, h)) c.appendChild(el('div', { class: 'sub' }, 'with ' + exName(t, h) + ' for export'));
       c.appendChild(el('div', { class: 'num ' + (d < 0 ? 'pos' : ''), style: 'font-size:22px;font-weight:650;margin-top:6px' }, d < 0 ? pounds(-d / h) + ' a month better off' : 'No better than now'));
       c.appendChild(el('div', { class: 'sub' }, d < 0 ? 'About ' + pounds(-d) + ' over ' + h + ' months against ' + cur.name + '.' : 'Costs ' + pounds(d) + ' more over ' + h + ' months than ' + cur.name + '.'));
@@ -1115,7 +1116,7 @@
     }
 
     // saving per month, every deal on its own basis
-    var top = rows.slice(0, 12), items = top.map(function (t) { var h = hOf(t); return { name: t.name, sub: t.kind + ' · over ' + h + ' months', v: -diffOf(t) / h, c: t.manual ? 'var(--predbat)' : t.other ? 'var(--perfect)' : 'var(--solis)' }; });
+    var top = rows.slice(0, 12), items = top.map(function (t) { var h = hOf(t); return { name: t.name, sub: typeOf(t) + ' · ' + t.kind + ' · over ' + h + ' months', v: -diffOf(t) / h, c: t.manual ? 'var(--predbat)' : t.other ? 'var(--perfect)' : 'var(--solis)' }; });
     var mx = Math.max.apply(null, items.map(function (i) { return Math.abs(i.v); }).concat([1]));
     var c2 = el('div', { class: 'card', style: 'margin-top:10px' }); c2.appendChild(el('h2', { style: 'font-size:14px' }, 'Better or worse off per month than ' + cur.name));
     var bars = el('div', { class: 'bars' });
@@ -1129,9 +1130,9 @@
 
     // table
     var tc = el('div', { class: 'card', style: 'margin-top:10px' }), sc = el('div', { class: 'scroll' }); tc.appendChild(el('h2', { style: 'font-size:14px' }, 'All ' + rows.length + ' deals, best first')); tc.appendChild(sc);
-    table(sc, ['Import deal', 'Export deal paired', 'Over', 'Import cost', 'Export earns', 'Net cost', 'Range', 'Against current', 'Rate now', 'Expected rate', 'Standing (p/day)', 'Contract'], rows.map(function (t) {
+    table(sc, ['Import deal', 'Export deal paired', 'Over', 'Import cost', 'Export earns', 'Net cost', 'Range', 'Against current', 'Rate now', 'Expected rate', 'Standing (p/day)', 'Price type', 'Contract'], rows.map(function (t) {
       var h = hOf(t), p = t.proj[h], d = diffOf(t);
-      return [t.name, exName(t, h) || 'None paired', h + ' months', pounds(p[0]), pounds(p[1]), pounds(p[2]), p[4] - p[3] > 50 ? pounds(p[3]) + ' to ' + pounds(p[4]) : 'fixed', pounds(d, true), rateTxt(t), expTxt(t, h), fmt(t.standingP, 1), t.term ? t.term + ' months' + (t.exitFeeP ? ', exit fee ' + pounds(t.exitFeeP) : '') : 'No fixed term'];
+      return [t.name, exName(t, h) || 'None paired', h + ' months', pounds(p[0]), pounds(p[1]), pounds(p[2]), p[4] - p[3] > 50 ? pounds(p[3]) + ' to ' + pounds(p[4]) : 'fixed', pounds(d, true), rateTxt(t), expTxt(t, h), fmt(t.standingP, 1), typeOf(t), t.term ? t.term + ' months' + (t.exitFeeP ? ', exit fee ' + pounds(t.exitFeeP) : '') : 'No fixed term'];
     }));
     out.appendChild(tc);
 
