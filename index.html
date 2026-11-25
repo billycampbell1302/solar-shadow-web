@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'd23011257b', u = new URL(location.href);
+    var id = '5ba237a129', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -255,6 +255,36 @@
   .pills .pill { flex:0 0 auto; }
   @media (max-width:470px) { .pills { gap:4px; } .pills .pill { font-size:11px !important; padding:3px 7px !important; } }
   @media (max-width:360px) { .pills .pill { font-size:10px !important; padding:2px 6px !important; } }
+
+  /* ============ Overhaul layer: calm daylight palette, clearer type, grouped navigation, Simple and Full views ============ */
+  :root { --page:#f3f5f2; --surface:#ffffff; --ink:#15201e; --ink2:#46544f; --muted:#79857f; --border:rgba(21,32,30,.12); --grid:#dfe5e1; --axis:#c4cdc8; --accent:#b97800; --radius:14px; }
+  @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) { --page:#0d1312; --surface:#141c1a; --ink:#e8efec; --ink2:#b7c4be; --muted:#7f8d87; --border:rgba(232,239,236,.12); --grid:#243030; --axis:#34423f; --accent:#e3a62a; } }
+  :root[data-theme="dark"] { --page:#0d1312; --surface:#141c1a; --ink:#e8efec; --ink2:#b7c4be; --muted:#7f8d87; --border:rgba(232,239,236,.12); --grid:#243030; --axis:#34423f; --accent:#e3a62a; }
+  body { font-family: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  h1 { font-size:19px; font-weight:700; letter-spacing:-.02em; }
+  section > h2, #viewTf > h2, #viewCar > h2 { font-size:19px; font-weight:700; letter-spacing:-.015em; margin:0 0 4px; }
+  .card { border-radius:var(--radius); box-shadow:none; }
+  .card > h2 { font-size:14.5px; font-weight:650; letter-spacing:-.005em; }
+  section { margin-top:30px; }
+  .hero .num, .tile .v, .num { font-variant-numeric:tabular-nums; letter-spacing:-.025em; }
+  .hero .num { font-size:50px; }
+  .tile { border-radius:var(--radius); }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  nav.tabs { gap:2px; margin:14px 0 6px; border-bottom:1px solid var(--border); flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; }
+  nav.tabs::-webkit-scrollbar { display:none; }
+  nav.tabs button { border:0; border-radius:0; background:transparent; padding:10px 13px 9px; margin-bottom:-1px; border-bottom:2px solid transparent; font-size:14px; color:var(--ink2); }
+  nav.tabs button[aria-selected="true"] { color:var(--ink); border-bottom-color:var(--accent); font-weight:650; }
+  nav.tabs .gap { flex:1; }
+  .seg { display:flex; gap:4px; padding:3px; border-radius:12px; background:var(--grid); margin:14px 0 4px; width:fit-content; max-width:100%; overflow-x:auto; }
+  .seg button { font:inherit; font-size:13.5px; padding:7px 14px; border:0; border-radius:9px; background:transparent; color:var(--ink2); cursor:pointer; white-space:nowrap; }
+  .seg button[aria-selected="true"] { background:var(--surface); color:var(--ink); font-weight:650; box-shadow:0 1px 2px rgba(0,0,0,.12); }
+  #viewDash[data-sel="today"] [data-pane]:not([data-pane="today"]), #viewDash[data-sel="plan"] [data-pane]:not([data-pane="plan"]),
+  #viewDash[data-sel="past"] [data-pane]:not([data-pane="past"]), #viewDash[data-sel="accuracy"] [data-pane]:not([data-pane="accuracy"]) { display:none; }
+  header .pills { display:flex; flex-wrap:wrap; gap:6px; width:100%; }
+  .modebtn { margin-left:auto; font:inherit; font-size:12px; padding:2px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--ink2); cursor:pointer; }
+  .modebtn b { color:var(--ink); }
+  html[data-mode="simple"] .adv { display:none !important; }
+  @media (max-width:700px) { .seg { width:100%; } .seg button { flex:1; padding:8px 6px; font-size:13px; } .hero .num { font-size:44px; } }
 </style>
 </head>
 <body>
@@ -1449,6 +1479,63 @@
   $('verPill').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('verPill').click(); } });
   setTimeout(checkVersion, 2500); setInterval(checkVersion, 30 * 60 * 1000);
   load(); setInterval(load, 5 * 60 * 1000);
+})();
+</script>
+
+<script>
+/* Overhaul layer: plain-English names, grouped dashboard panes, and a Simple / Full view switch. Only changes what is shown; nothing here changes any data. */
+(function () {
+  var $ = function (id) { return document.getElementById(id); }, acc = window.__ACCESS__ || { owner: true };
+  var mode = ''; try { mode = localStorage.getItem('viewMode') || ''; } catch (e) {}
+  if (mode !== 'simple' && mode !== 'full') mode = acc.owner ? 'full' : 'simple';
+  // names: what each page is for, in plain words
+  var names = { tabDash: 'Overview', tabLog: 'Daily results', tabTf: 'Tariffs', tabCar: 'Cars', tabSh: 'Summerhouse', tabAct: 'System health', tabBr: 'How it works', tabSetup: 'Settings' };
+  Object.keys(names).forEach(function (id) { if ($(id)) $(id).textContent = names[id]; });
+  var nav = document.querySelector('nav.tabs');
+  ['tabDash', 'tabLog', 'tabTf', 'tabCar', 'tabSh', 'tabAct', 'tabBr', 'tabSetup'].forEach(function (id) { if ($(id)) nav.appendChild($(id)); });
+  ['tabAct', 'tabBr', 'tabSetup'].forEach(function (id) { if ($(id)) $(id).classList.add('adv'); });
+  var bb = document.querySelector('#botbar button[data-t="dash"]'); if (bb) bb.lastChild.textContent = 'Overview';
+  var bl = document.querySelector('#botbar button[data-t="log"]'); if (bl) bl.lastChild.textContent = 'Daily';
+  var sheet = $('moreSheet');
+  if (sheet) {
+    var lab = { act: 'System health', br: 'How it works', sh: 'Summerhouse', setup: 'Settings' };
+    Array.prototype.forEach.call(sheet.querySelectorAll('button[data-t]'), function (b) { var t = b.getAttribute('data-t'); if (lab[t]) b.textContent = lab[t]; if (t === 'act' || t === 'br' || t === 'setup') b.classList.add('adv'); });
+    var sh = sheet.querySelector('button[data-t="sh"]'); if (sh) sheet.insertBefore(sh, sheet.firstChild);
+  }
+  // dashboard panes
+  var dash = $('viewDash'), panes = [
+    ['today', 'section[aria-label="Headline"], #kpis, section[aria-label="Today"]'],
+    ['plan', 'section[aria-label="Plan"]'],
+    ['past', 'section[aria-label="History"], section[aria-label="Solar forecasts"]'],
+    ['accuracy', 'section[aria-label="Quality and learning"], section.how']
+  ];
+  panes.forEach(function (p) { Array.prototype.forEach.call(dash.querySelectorAll(p[1]), function (e) { e.setAttribute('data-pane', p[0]); }); });
+  var seg = document.createElement('div'); seg.className = 'seg'; seg.setAttribute('role', 'tablist'); seg.setAttribute('aria-label', 'Overview sections');
+  var segNames = { today: 'Today', plan: 'Next 24 hours', past: 'Past days', accuracy: 'How accurate' };
+  function selPane(k) {
+    dash.setAttribute('data-sel', k);
+    Array.prototype.forEach.call(seg.children, function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-k') === k)); });
+    try { sessionStorage.setItem('pane', k); } catch (e) {}
+    setTimeout(function () { window.dispatchEvent(new Event('resize')); }, 30);
+  }
+  panes.forEach(function (p) {
+    var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('data-k', p[0]); b.textContent = segNames[p[0]];
+    if (p[0] === 'accuracy') b.className = 'adv';
+    b.addEventListener('click', function () { selPane(p[0]); }); seg.appendChild(b);
+  });
+  dash.insertBefore(seg, dash.firstChild);
+  var start = 'today'; try { start = sessionStorage.getItem('pane') || 'today'; } catch (e) {}
+  if (mode === 'simple' && start === 'accuracy') start = 'today';
+  selPane(start);
+  // Simple / Full switch
+  var pills = document.querySelector('.pills'), btn = document.createElement('button'); btn.type = 'button'; btn.className = 'modebtn'; btn.setAttribute('title', 'Simple shows the headline pages. Full shows everything, including how it works.');
+  function apply() {
+    document.documentElement.setAttribute('data-mode', mode); btn.textContent = ''; var b = document.createElement('b'); b.textContent = mode === 'simple' ? 'Simple' : 'Full'; btn.appendChild(document.createTextNode('View: ')); btn.appendChild(b);
+    if (mode === 'simple') { if (dash.getAttribute('data-sel') === 'accuracy') selPane('today'); var cur = document.querySelector('nav.tabs button[aria-selected="true"]'); if (cur && cur.classList.contains('adv')) $('tabDash').click(); }
+  }
+  btn.addEventListener('click', function () { mode = mode === 'simple' ? 'full' : 'simple'; try { localStorage.setItem('viewMode', mode); } catch (e) {} apply(); });
+  if (pills) pills.appendChild(btn);
+  apply();
 })();
 </script>
 </body>
