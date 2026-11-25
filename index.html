@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'a55d812ce1', u = new URL(location.href);
+    var id = '5604c991df', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -420,6 +420,101 @@
   #viewTf details.setgrp { border-radius:16px; }
   #viewTf .bars .row { padding:6px 0; }
   @media (max-width:560px) { #viewTf .tfbig { font-size:28px; } #viewTf .tfhero { padding:16px; } #viewTf .tfcard { padding:14px; } #viewTf .tfcl { min-width:100%; } }
+
+  /* Same polish on every page */
+  #viewDash .card:not(.headline),
+  #viewLog .card:not(.headline),
+  #viewCar .card:not(.headline),
+  #viewSh .card:not(.headline),
+  #viewAct .card:not(.headline),
+  #viewBr .card:not(.headline),
+  #viewSetup .card:not(.headline) { padding:16px 18px 14px; border-radius:18px; }
+  #viewDash .card > h2, .card > .row > h2, .card > .head > h2,
+  #viewLog .card > h2, .card > .row > h2, .card > .head > h2,
+  #viewCar .card > h2, .card > .row > h2, .card > .head > h2,
+  #viewSh .card > h2, .card > .row > h2, .card > .head > h2,
+  #viewAct .card > h2, .card > .row > h2, .card > .head > h2,
+  #viewBr .card > h2, .card > .row > h2, .card > .head > h2,
+  #viewSetup .card > h2, .card > .row > h2, .card > .head > h2 { display:flex; align-items:center; gap:9px; font-size:16px; font-weight:650; letter-spacing:0; text-transform:none; color:var(--ink); }
+  .tfi { display:inline-flex; flex:0 0 auto; width:28px; height:28px; align-items:center; justify-content:center; border-radius:9px; background:color-mix(in srgb, var(--accent) 14%, transparent); font-size:15px; }
+  #viewDash .card.headline,
+  #viewLog .card.headline,
+  #viewCar .card.headline,
+  #viewSh .card.headline,
+  #viewAct .card.headline,
+  #viewBr .card.headline,
+  #viewSetup .card.headline { padding:18px 20px; border-radius:20px; border:1px solid color-mix(in srgb, var(--accent) 35%, var(--border)); background:linear-gradient(160deg, color-mix(in srgb, var(--accent) 12%, var(--surface)) 0%, var(--surface) 70%); }
+  #viewDash .tile,
+  #viewLog .tile,
+  #viewCar .tile,
+  #viewSh .tile,
+  #viewAct .tile,
+  #viewBr .tile,
+  #viewSetup .tile { border-radius:16px; box-shadow:var(--shadow); }
+  #viewDash table,
+  #viewLog table,
+  #viewCar table,
+  #viewSh table,
+  #viewAct table,
+  #viewBr table,
+  #viewSetup table { border-collapse:separate; border-spacing:0; }
+  #viewDash th,
+  #viewLog th,
+  #viewCar th,
+  #viewSh th,
+  #viewAct th,
+  #viewBr th,
+  #viewSetup th { font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--border); }
+  #viewDash td,
+  #viewLog td,
+  #viewCar td,
+  #viewSh td,
+  #viewAct td,
+  #viewBr td,
+  #viewSetup td { padding:10px 10px; border-bottom:1px solid color-mix(in srgb, var(--grid) 60%, transparent); }
+  #viewDash tbody tr:nth-child(even) td,
+  #viewLog tbody tr:nth-child(even) td,
+  #viewCar tbody tr:nth-child(even) td,
+  #viewSh tbody tr:nth-child(even) td,
+  #viewAct tbody tr:nth-child(even) td,
+  #viewBr tbody tr:nth-child(even) td,
+  #viewSetup tbody tr:nth-child(even) td { background:color-mix(in srgb, var(--ink) 2.5%, transparent); }
+  #viewDash tbody tr:hover td,
+  #viewLog tbody tr:hover td,
+  #viewCar tbody tr:hover td,
+  #viewSh tbody tr:hover td,
+  #viewAct tbody tr:hover td,
+  #viewBr tbody tr:hover td,
+  #viewSetup tbody tr:hover td { background:color-mix(in srgb, var(--accent) 7%, transparent); }
+  #viewDash .btn.sm, .seg button,
+  #viewLog .btn.sm, .seg button,
+  #viewCar .btn.sm, .seg button,
+  #viewSh .btn.sm, .seg button,
+  #viewAct .btn.sm, .seg button,
+  #viewBr .btn.sm, .seg button,
+  #viewSetup .btn.sm, .seg button { border-radius:999px; }
+  #viewDash .btn.primary, .seg button[aria-selected="true"],
+  #viewLog .btn.primary, .seg button[aria-selected="true"],
+  #viewCar .btn.primary, .seg button[aria-selected="true"],
+  #viewSh .btn.primary, .seg button[aria-selected="true"],
+  #viewAct .btn.primary, .seg button[aria-selected="true"],
+  #viewBr .btn.primary, .seg button[aria-selected="true"],
+  #viewSetup .btn.primary, .seg button[aria-selected="true"] { background:var(--accent); border-color:var(--accent); color:#fff; }
+  #viewDash details.setgrp,
+  #viewLog details.setgrp,
+  #viewCar details.setgrp,
+  #viewSh details.setgrp,
+  #viewAct details.setgrp,
+  #viewBr details.setgrp,
+  #viewSetup details.setgrp { border-radius:16px; }
+  #viewDash > .seg, #viewDash .seg { border-radius:999px; }
+  @media (max-width:560px) { #viewDash .card:not(.headline),
+  #viewLog .card:not(.headline),
+  #viewCar .card:not(.headline),
+  #viewSh .card:not(.headline),
+  #viewAct .card:not(.headline),
+  #viewBr .card:not(.headline),
+  #viewSetup .card:not(.headline) { padding:14px; } }
 </style>
 </head>
 <body>
@@ -1884,6 +1979,25 @@
   function load() { if (!window.__gs) return setTimeout(load, 800); window.__gs('getSolarAccuracy', [(window.__ACCESS__ || {}).key || ''], render, function (e) { var s = $('accSum'); if (s) s.textContent = 'Could not load: ' + e; }); }
   document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.seg button'); if (b && /accurate/i.test(b.textContent)) load(); });
   setTimeout(load, 1500);
+})();
+</script>
+
+<script>
+/* Section icons: a small badge before each card title, the same on every page */
+(function () {
+  var map = [[/car|tesla|charger/i, '🚗'], [/compare|against|versus/i, '⚖️'], [/reading|odometer|log/i, '📝'], [/battery|charge/i, '🔋'], [/solar|forecast|weather|sun/i, '☀️'], [/price|rate|cost|money|saved|saving|earn/i, '💷'], [/grid|bought|import|export/i, '⚡'], [/accura|quality|learn|score/i, '🎯'], [/plan|schedule|next/i, '🧭'], [/car|tesla|charger/i, '🚗'], [/heat|temperature|summerhouse|warm|cool/i, '🌡️'], [/setting|setup|share|link|key|tool|check/i, '⚙️'], [/health|activity|log|status|error/i, '🩺'], [/how|work|reading|about/i, '💡'], [/month|year|day|history|past|total|running/i, '📅']];
+  function pick(t) { for (var i = 0; i < map.length; i++) if (map[i][0].test(t)) return map[i][1]; return '📌'; }
+  function paint(root) {
+    Array.prototype.forEach.call((root || document).querySelectorAll('#viewDash .card > h2, #viewLog .card > h2, #viewCar .card > h2, #viewSh .card > h2, #viewAct .card > h2, #viewBr .card > h2, #viewSetup .card > h2'), function (h) {
+      if (h.getAttribute('data-ic') || h.querySelector('.tfi')) { h.setAttribute('data-ic', '1'); return; }
+      var t = h.textContent || ''; if (!t.trim()) return;
+      var sp = document.createElement('span'); sp.className = 'tfi'; sp.setAttribute('aria-hidden', 'true'); sp.textContent = pick(t);
+      h.insertBefore(sp, h.firstChild); h.setAttribute('data-ic', '1');
+    });
+  }
+  var timer = null, mo = new MutationObserver(function () { clearTimeout(timer); timer = setTimeout(function () { paint(); }, 60); });
+  mo.observe(document.body, { childList: true, subtree: true });
+  paint();
 })();
 </script>
 </body>
