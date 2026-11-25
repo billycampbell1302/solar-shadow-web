@@ -1,0 +1,1271 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Solar">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0b0b0c">
+<meta name="robots" content="noindex,nofollow">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<title>Solar shadow run</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --solis:#2a78d6; --ours:#eb6834; --perfect:#1baf7a; --predbat:#8e5bd0; --plain:#898781; --ours-soft:#f4a98a;
+    --good:#0ca30c; --warn:#fab219; --crit:#d03b3b; --success-text:#006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+      --solis:#3987e5; --ours:#d95926; --perfect:#199e70; --predbat:#a06be0; --plain:#898781; --ours-soft:#8d4122; --success-text:#0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+    --solis:#3987e5; --ours:#d95926; --perfect:#199e70; --predbat:#a06be0; --plain:#898781; --ours-soft:#8d4122; --success-text:#0ca30c;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--page); color:var(--ink); font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  
+  .wrap { max-width:1080px; margin:0 auto; padding:20px 16px 48px; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin-bottom:4px; }
+  h1 { font-size:20px; margin:0; font-weight:650; letter-spacing:-.01em; }
+  h2 { font-size:16px; margin:0 0 2px; font-weight:650; }
+  .sub { color:var(--ink2); font-size:13px; }
+  .muted { color:var(--muted); }
+  .pill { font-size:12px; padding:2px 9px; border-radius:20px; border:1px solid var(--border); color:var(--ink2); background:var(--surface); white-space:nowrap; }
+  .pill.lock { border-color:var(--perfect); color:var(--ink); }
+  .banner { margin:10px 0; padding:9px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface); font-size:13px; display:flex; gap:8px; align-items:flex-start; }
+  .banner.sample { border-color:var(--warn); }
+  .banner .ic { font-weight:700; }
+  section { margin-top:22px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
+  .hero { display:grid; grid-template-columns:1fr; gap:6px; }
+  .hero .num { font-size:56px; line-height:1.05; font-weight:650; letter-spacing:-.02em; }
+  .hero .lbl { color:var(--ink2); font-size:14px; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:12px; }
+  .tile { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:10px 14px; }
+  .tile .k { font-size:12.5px; color:var(--ink2); }
+  .tile .v { font-size:26px; font-weight:600; line-height:1.15; }
+  .tile .s { font-size:12px; color:var(--muted); }
+  .grid2 { display:grid; grid-template-columns:1fr; gap:14px; }
+  @media (min-width:860px) { .grid2 { grid-template-columns:1fr 1fr; } .hero { grid-template-columns:auto 1fr; align-items:end; gap:8px 28px; } }
+  .legend { display:flex; flex-wrap:wrap; gap:4px 16px; font-size:12.5px; color:var(--ink2); margin:8px 0 8px; }
+  .legend i { display:inline-block; width:14px; height:3px; border-radius:2px; vertical-align:middle; margin-right:6px; }
+  .legend i.box { height:10px; width:10px; border-radius:2px; }
+  .chart { position:relative; width:100%; }
+  .chart svg { display:block; width:100%; overflow:visible; }
+  .tip { position:absolute; pointer-events:none; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:6px 9px; font-size:12.5px; box-shadow:0 2px 10px rgba(0,0,0,.12); z-index:5; display:none; min-width:150px; }
+  .tip .t { color:var(--muted); font-size:12px; margin-bottom:2px; }
+  .tip .r { display:flex; align-items:center; gap:7px; justify-content:space-between; }
+  .tip .r span.key { display:inline-block; width:12px; height:3px; border-radius:2px; margin-right:6px; }
+  .tip .r b { font-weight:650; }
+  .bars .row { display:grid; grid-template-columns:minmax(120px,210px) 1fr; gap:10px; align-items:center; padding:5px 0; }
+  .bars .name { font-size:13.5px; } .bars .name small { display:block; color:var(--muted); font-size:12px; }
+  .bars .track { position:relative; height:24px; }
+  @media (max-width:560px) { .bars .row { grid-template-columns:1fr; gap:3px; padding:7px 0; } }
+  .bars .bar { position:absolute; left:0; top:2px; height:20px; border-radius:0 4px 4px 0; min-width:2px; }
+  .bars .val { position:absolute; top:0; line-height:24px; font-size:13px; white-space:nowrap; padding-left:8px; }
+  table { width:100%; border-collapse:collapse; font-size:13.5px; font-variant-numeric:tabular-nums; }
+  th, td { text-align:right; padding:7px 8px; border-bottom:1px solid var(--grid); white-space:nowrap; }
+  th:first-child, td:first-child { text-align:left; }
+  th { font-weight:600; color:var(--ink2); font-size:12.5px; }
+  th:last-child { white-space:normal; min-width:190px; }
+  #tblLog th:last-child { min-width:0; white-space:nowrap; }
+  tr.partial td { color:var(--muted); }
+  @media (max-width:560px) { #tblLog .wide { display:none; } #tblLog .tag { display:block; width:fit-content; margin:3px 0 0; } #tblLog th, #tblLog td { padding-left:6px; padding-right:6px; } }
+  .scroll { overflow-x:auto; }
+  .daybar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:8px 0 4px; }
+  .daybar input[type=date] { font:inherit; font-size:14px; padding:5px 8px; border-radius:8px; border:1px solid var(--axis); background:var(--surface); color:var(--ink); }
+  .daybar .big { font-size:17px; font-weight:650; margin-right:4px; }
+  .daynote { font-size:13px; color:var(--ink2); margin:6px 0; } .daynote.warn { border-left:3px solid var(--warn); padding-left:8px; }
+  .pos { color:var(--success-text); } .neg { color:var(--crit); }
+  #actTimeline .jr { margin:0 0 12px; } #actTimeline .jl { font-size:13px; display:flex; justify-content:space-between; gap:8px; margin-bottom:3px; } #actTimeline .jl span:last-child { color:var(--ink2); font-size:12px; text-align:right; }
+  #actTimeline svg { display:block; width:100%; height:20px; } #tblAct .kw { font-size:11.5px; color:var(--ink2); margin-top:2px; white-space:normal; } #tblAct td:first-child { white-space:normal; }
+  .st { font-size:12px; border-radius:20px; padding:1px 8px; border:1px solid var(--border); white-space:nowrap; } .st.ok { color:var(--good); border-color:var(--good); } .st.fail { color:var(--crit); border-color:var(--crit); } .st.late { color:var(--warn); border-color:var(--warn); }
+  @media (max-width:560px) { #tblAct .wide { display:none; } }
+  #logCompare .cmp { padding:8px 0; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:2px; } #logCompare .cmp:first-child { border-top:0; } #logCompare .cv { font-size:14px; } #logCompare .cd { font-size:12px; color:var(--ink2); overflow-wrap:anywhere; }
+  .shin { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 12px; margin-top:8px; } .shin label { font-size:12.5px; color:var(--ink2); display:flex; flex-direction:column; gap:3px; }
+  .shin input { font:inherit; font-size:15px; padding:7px 9px; border-radius:8px; border:1px solid var(--axis); background:var(--page); color:var(--ink); width:100%; box-sizing:border-box; }
+  #shOut .o { padding:8px 0; border-top:1px solid var(--border); } #shOut .o:first-child { border-top:0; } #shOut .o b { display:block; font-size:18px; } #shOut .o span { font-size:12.5px; color:var(--ink2); }
+  #tblLog .kw { font-size:11.5px; color:var(--ink2); margin-top:2px; display:none; white-space:normal; }
+  @media (max-width:560px) { #tblLog td:first-child { white-space:normal; width:52%; } #tblLog th, #tblLog td { font-size:13.5px; } }
+  @media (max-width:560px) { #tblLog .kw { display:block; } }
+  .tag { font-size:11.5px; border:1px solid var(--border); border-radius:20px; padding:1px 7px; color:var(--ink2); margin-left:6px; }
+  .grid2 > * { min-width:0; }
+  .q { list-style:none; margin:0; padding:0; }
+  .q li { display:grid; grid-template-columns:22px minmax(0,1fr); gap:8px; padding:7px 0; border-bottom:1px solid var(--grid); }
+  .q li:last-child { border:0; }
+  .q .ic { width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; margin-top:1px; }
+  .ic.good { background:var(--good); } .ic.warn { background:var(--warn); color:#0b0b0b; } .ic.crit { background:var(--crit); } .ic.na { background:var(--muted); }
+  .q b { font-weight:600; } .q span.d { color:var(--ink2); display:block; font-size:13px; overflow-wrap:anywhere; }
+  details { margin-top:8px; } summary { cursor:pointer; color:var(--ink2); font-size:13px; }
+  details table { margin-top:6px; }
+  .how p, .how li { font-size:13.5px; color:var(--ink2); margin:6px 0; }
+  .how b { color:var(--ink); }
+  #main.loading { opacity:.6; transition:opacity .15s; }
+  .empty { color:var(--muted); font-size:13.5px; padding:18px 0; }
+
+  nav.tabs { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 2px; }
+  nav.tabs button { font:inherit; font-size:13.5px; padding:6px 12px; white-space:nowrap; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--ink2); cursor:pointer; }
+  nav.tabs button[aria-selected="true"] { color:var(--ink); border-color:var(--ink2); font-weight:600; }
+
+  /* phone: app-style bottom bar, bigger tap targets, pull to refresh */
+  :root { --sb:env(safe-area-inset-bottom, 0px); }
+  /* opened from the Home Screen: leave room for the iPhone's home bar so the buttons can be tapped */
+  .standalone { --sb:max(env(safe-area-inset-bottom, 0px), 24px); }
+  :root { --st:env(safe-area-inset-top, 0px); }
+  /* full-bleed: the page runs under the clock and battery, so keep the heading clear of them */
+  .wrap { padding-top:calc(var(--st) + 18px); }
+  .botbar, .sheet { display:none; }
+  .ptr { position:fixed; top:0; left:0; right:0; text-align:center; font-size:13px; color:var(--ink2); padding:10px 0; transform:translateY(-100%); transition:transform .15s; z-index:60; pointer-events:none; }
+  .ptr.on { transform:translateY(0); background:var(--surface); border-bottom:1px solid var(--border); }
+  @media (max-width:700px) {
+    nav.tabs { display:none; }
+    #main { padding-bottom:calc(84px + var(--sb)); }
+    .botbar { display:flex; position:fixed; left:0; right:0; bottom:0; z-index:50; background:var(--surface); border-top:1px solid var(--border); padding-bottom:var(--sb); }
+    .botbar button { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; min-height:56px; padding:7px 2px 6px; border:0; background:transparent; color:var(--ink2); font:inherit; font-size:11px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .botbar button svg { width:23px; height:23px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+    .botbar button[aria-selected="true"] { color:var(--ink); font-weight:650; }
+    .sheet { position:fixed; left:0; right:0; bottom:calc(56px + var(--sb)); z-index:55; background:var(--surface); border-top:1px solid var(--border); border-radius:16px 16px 0 0; padding:8px 12px 12px; box-shadow:0 -8px 24px rgba(0,0,0,.25); }
+    .sheet:not([hidden]) { display:block; }
+    .sheet button { display:block; width:100%; text-align:left; font:inherit; font-size:16px; padding:14px 8px; border:0; border-bottom:1px solid var(--border); background:transparent; color:var(--ink); min-height:48px; }
+    .sheet button:last-child { border-bottom:0; }
+    button.btn, button.btn.sm { min-height:40px; }
+    input, select, textarea { font-size:16px; }
+    .daybar button, .daybar input[type=date] { min-height:40px; }
+  }
+  [hidden] { display:none !important; }
+  .field { display:grid; grid-template-columns:minmax(150px,230px) 1fr auto; gap:8px 12px; align-items:center; padding:9px 0; border-bottom:1px solid var(--grid); }
+  .field:last-child { border:0; }
+  .field .nm b { font-weight:600; display:block; font-size:13.5px; } .field .nm small { color:var(--muted); font-size:12px; }
+  .field input, .field select { font:inherit; font-size:14px; padding:7px 10px; border-radius:8px; border:1px solid var(--axis); background:var(--page); color:var(--ink); width:100%; min-width:0; }
+  .field .btns { display:flex; gap:6px; }
+  button.btn { font:inherit; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--axis); background:var(--surface); color:var(--ink); cursor:pointer; }
+  button.btn:disabled { opacity:.5; cursor:default; }
+  button.btn.primary { background:var(--ink); color:var(--page); border-color:var(--ink); }
+  .chip { font-size:11.5px; border-radius:20px; padding:1px 8px; border:1px solid var(--border); margin-left:6px; color:var(--ink2); }
+  .chip.on { border-color:var(--good); color:var(--success-text); }
+  .msg { font-size:12.5px; grid-column:1 / -1; color:var(--ink2); } .msg.err { color:var(--crit); }
+  .actions { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:10px; }
+  .actions .a { border:1px solid var(--border); border-radius:10px; padding:10px 12px; background:var(--surface); }
+  .actions .a small { display:block; color:var(--muted); font-size:12px; margin:2px 0 8px; }
+  pre.out { white-space:pre-wrap; word-break:break-word; font-size:12.5px; background:var(--page); border:1px solid var(--grid); border-radius:8px; padding:10px; margin:8px 0 0; max-height:260px; overflow:auto; }
+  #setupStatus { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:0 28px; } #setupStatus li { padding:7px 0 !important; } #setupStatus li .d { font-size:12.5px; }
+  button.btn.sm { font-size:12.5px; padding:4px 10px; border-radius:7px; }
+  .agrp { display:grid; grid-template-columns:150px 1fr; gap:6px 12px; align-items:start; padding:9px 0; border-bottom:1px solid var(--grid); }
+  .agrp:last-child { border:0; }
+  .agrp .t { font-size:13px; font-weight:600; padding-top:4px; }
+  .agrp .bs { display:flex; flex-wrap:wrap; gap:6px; }
+  .agrp details { grid-column:2; margin:0; } .agrp details summary { font-size:12px; color:var(--muted); }
+  .agrp details ul { margin:6px 0 0; padding-left:16px; font-size:12px; color:var(--ink2); } .agrp details li { margin:2px 0; }
+  details.setgrp { margin-top:10px; border:1px solid var(--border); border-radius:12px; background:var(--surface); padding:0; }
+  details.setgrp > summary { list-style:none; display:flex; align-items:center; gap:10px; padding:11px 14px; cursor:pointer; font-weight:650; font-size:14px; color:var(--ink); }
+  details.setgrp > summary::-webkit-details-marker { display:none; }
+  details.setgrp > summary::before { content:'▸'; color:var(--muted); font-size:12px; transition:transform .15s; } details.setgrp[open] > summary::before { transform:rotate(90deg); }
+  details.setgrp > summary .chip { margin-left:auto; font-weight:400; }
+  details.setgrp > .body { padding:0 14px 6px; }
+  @media (max-width:640px) { .field { grid-template-columns:1fr; } .agrp { grid-template-columns:1fr; } .agrp details { grid-column:1; } }
+  footer { margin-top:26px; color:var(--muted); font-size:12px; }
+
+  /* ---- polish: calmer type, softer cards, app-like header and bar ---- */
+  :root { --radius:16px; --shadow:0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.05); --accent:var(--solis); }
+  @media (prefers-color-scheme: dark) { :root:where(:not([data-theme="light"])) { --page:#0b0b0c; --surface:#151516; --border:rgba(255,255,255,.08); --shadow:none; --accent:#5b9cf0; } }
+  body { font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+  header { margin-bottom:8px; gap:6px 8px; }
+  h1 { flex:1 0 100%; font-size:27px; font-weight:700; letter-spacing:-.03em; line-height:1.15; }
+  .pill { font-size:11.5px; padding:3px 10px; background:transparent; color:var(--ink2); }
+  h2 { font-size:17px; font-weight:700; letter-spacing:-.015em; }
+  section { margin-top:26px; }
+  .card, .tile { border-radius:var(--radius); box-shadow:var(--shadow); }
+  .card { padding:16px 18px; }
+  .hero .num { font-size:46px; font-weight:700; letter-spacing:-.035em; }
+  .hero .lbl { font-size:15px; font-weight:550; color:var(--ink); }
+  .kpis { gap:10px; }
+  .tile { padding:12px 14px; }
+  .tile .k { font-size:11px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); font-weight:650; }
+  .tile .v { font-size:28px; font-weight:700; letter-spacing:-.02em; margin-top:2px; }
+  .tile .s { font-size:12px; margin-top:1px; }
+  @media (max-width:700px) { .kpis > :last-child:nth-child(odd) { grid-column:1 / -1; } }
+  details.about { margin:0 0 6px; } details.about > summary { font-size:12.5px; color:var(--muted); cursor:pointer; list-style:none; } details.about > summary::-webkit-details-marker { display:none; } details.about > summary::after { content:" \203A"; }
+  details.about[open] > summary::after { content:" \2039"; } details.about .sub { margin-top:4px; }
+  .daybar { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; padding:2px 0 8px; margin:6px 0 2px; }
+  .daybar::-webkit-scrollbar { display:none; } .daybar > * { flex:0 0 auto; }
+  button.btn { border-radius:10px; border-color:var(--border); background:var(--surface); font-weight:550; }
+  button.btn.primary { border-radius:10px; }
+  .daybar input[type=date] { border-radius:10px; border-color:var(--border); background:var(--surface); }
+  .banner { border-radius:12px; }
+  details > summary { cursor:pointer; }
+  @media (max-width:700px) {
+    .wrap { padding-left:16px; padding-right:16px; }
+    .botbar { background:var(--surface); background:color-mix(in srgb, var(--surface) 80%, transparent); -webkit-backdrop-filter:saturate(1.6) blur(20px); backdrop-filter:saturate(1.6) blur(20px); border-top:1px solid var(--border); }
+    .botbar button { font-size:10.5px; font-weight:550; letter-spacing:.01em; color:var(--muted); }
+    .botbar button[aria-selected="true"] { color:var(--accent); font-weight:650; }
+    .sheet { background:var(--surface); border-radius:20px 20px 0 0; }
+    .hero .num { font-size:40px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="main">
+  <header>
+    <h1>Solar shadow run</h1>
+    <span class="pill lock" title="Nothing on this page, or in this software, sends anything to the inverter">Read-only</span>
+    <span class="pill" id="tariff">–</span>
+    <span class="pill" id="fresh">Loading…</span>
+  </header>
+  <nav class="tabs" role="tablist"><button role="tab" id="tabDash" aria-selected="true">Dashboard</button><button role="tab" id="tabLog" aria-selected="false">Daily log</button><button role="tab" id="tabAct" aria-selected="false">Activity</button><button role="tab" id="tabBr" aria-selected="false">Our software</button><button role="tab" id="tabTf" aria-selected="false">Tariffs</button><button role="tab" id="tabCar" aria-selected="false">Cars</button><button role="tab" id="tabSh" aria-selected="false">Summerhouse</button><button role="tab" id="tabSetup" aria-selected="false">Setup</button></nav>
+  <details class="about"><summary>About this page</summary><div class="sub">Solis AI keeps running the battery exactly as it is set up. Our software plans as if it were in charge, and each day we compare the two on the same real solar, house use and prices.</div></details>
+  <div id="banners"></div>
+
+  <div id="viewDash">
+  <section class="card hero" aria-label="Headline">
+    <div><div class="num" id="heroNum">–</div></div>
+    <div><div class="lbl" id="heroLbl">Waiting for the first finished day.</div><div class="sub" id="heroSub"></div></div>
+  </section>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section aria-label="Today">
+    <h2 id="todayH">Today so far</h2>
+    <div class="daybar" role="group" aria-label="Choose a day">
+      <button class="btn" id="dayPrev" aria-label="Previous day">&larr; Earlier</button>
+      <input type="date" id="dayDate" aria-label="Day to show">
+      <button class="btn" id="dayNext" aria-label="Next day">Later &rarr;</button>
+      <button class="btn" id="dayToday">Today</button>
+      <span class="sub" id="dayMsg"></span>
+    </div>
+    <div class="daynote" id="dayNotes"></div>
+    <div class="sub" id="todaySub">Four ways of running today, on the same real solar, house use and prices.</div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card"><div class="bars" id="scoreBars"></div><div class="sub" id="scoreNote" style="margin-top:6px"></div></div>
+      <div class="card"><h2 style="font-size:14px">Battery level through the day</h2><div class="legend" id="todayLegend"></div><div class="chart" id="chToday"></div><details><summary>View as table</summary><div class="scroll" id="tblToday"></div></details></div>
+    </div>
+    <div id="dayCharts">
+      <div class="card" id="liveCard" style="margin-top:14px" hidden></div>
+      <div class="daynote" id="daySummary" style="margin-top:14px"></div>
+      <div class="grid2">
+        <div class="card"><h2 style="font-size:14px">Solar and house use, every half hour</h2><div class="legend"><span><i style="background:var(--ours)"></i>Solar made</span><span><i style="background:var(--solis)"></i>House used</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Solar forecast at the time</span><span><i class="box" style="background:var(--perfect);opacity:.25"></i>Cheap-rate window</span></div><div class="chart" id="chDayPow"></div></div>
+        <div class="card"><h2 style="font-size:14px">Electricity price</h2><div class="legend"><span><i style="background:var(--plain)"></i>Pay per unit</span><span><i style="background:var(--perfect)"></i>Paid for export</span></div><div class="chart" id="chDayPrice"></div></div>
+        <div class="card"><h2 style="font-size:14px">What each half hour cost</h2><div class="legend"><span><i class="box" style="background:var(--solis)"></i>Net cost (bought minus sold)</span><span><i class="box" style="background:var(--perfect)"></i>Earned</span></div><div class="chart" id="chDayCost"></div></div>
+        <div class="card"><h2 style="font-size:14px">Grid: bought and sold</h2><div class="legend"><span><i class="box" style="background:var(--solis)"></i>Bought from grid</span><span><i class="box" style="background:var(--perfect)"></i>Sold to grid</span></div><div class="chart" id="chDayGrid"></div></div>
+        <div class="card"><h2 style="font-size:14px">Battery: charged and discharged</h2><div class="legend"><span><i class="box" style="background:var(--ours)"></i>Charging</span><span><i class="box" style="background:var(--ours-soft)"></i>Discharging</span></div><div class="chart" id="chDayBatt"></div></div>
+      </div>
+      <details><summary>Hour by hour</summary><div class="scroll" id="tblDay"></div></details>
+    </div>
+  </section>
+
+  <section aria-label="Plan">
+    <h2>Next 24 hours: what our software would do</h2>
+    <div class="sub" id="planSub">Not sent anywhere. This is the plan it would be following if it were in charge.</div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card"><h2 style="font-size:14px">Planned battery level</h2><div class="chart" id="chPlanSoc"></div></div>
+      <div class="card"><h2 style="font-size:14px">Planned battery power</h2><div class="legend"><span><i class="box" style="background:var(--ours)"></i>Charging</span><span><i class="box" style="background:var(--ours-soft)"></i>Discharging</span></div><div class="chart" id="chPlanPow"></div></div>
+    </div>
+    <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Import price</h2><div class="chart" id="chPrice"></div><details><summary>View the plan as a table</summary><div class="scroll" id="tblPlan"></div></details></div>
+  </section>
+
+  <section aria-label="History">
+    <h2>Finished days</h2>
+    <div class="sub">Only complete days with good readings count towards the totals.</div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card"><h2 style="font-size:14px">Running total saved against Solis AI</h2><div class="legend" id="cumLegend"></div><div class="sub" id="cumNote"></div><div class="chart" id="chCum"></div></div>
+      <div class="card"><h2 style="font-size:14px">Where each one leaves the battery when the cheap rate ends</h2><div class="legend" id="habLegend"></div><div class="chart" id="chHab"></div></div>
+    </div>
+    <div class="card scroll" style="margin-top:14px"><table id="tblDaily"></table></div>
+  </section>
+
+  <section aria-label="Solar forecasts">
+    <h2>Which solar forecast is better?</h2>
+    <div class="sub" id="fcSub">Open-Meteo (ours, with our learned correction for Dad's panels) against Solcast, each scored only on forecasts made before the time they predict.</div>
+    <div class="card scroll" style="margin-top:10px"><div id="fcVerdict" class="sub" style="margin-bottom:6px"></div><table id="tblFc"></table></div>
+  </section>
+
+  <section aria-label="Quality and learning">
+    <div class="grid2">
+      <div class="card"><h2>Data quality</h2><ul class="q" id="quality"></ul></div>
+      <div class="card"><h2>What it has learned</h2><div class="sub" id="learnSub"></div><div class="scroll"><table id="tblTune"></table></div></div>
+    </div>
+  </section>
+
+  <section class="card how" aria-label="How to read this">
+    <h2>How to read this</h2>
+    <ul>
+      <li><b>Solis AI (actual).</b> What really happened, priced from the inverter's own counters of grid import, export and battery use.</li>
+      <li><b>Our software (replay).</b> What our planner would have done at every half hour, using only the solar and house forecasts it had saved at that moment. It never sees what happens next. It is a replay against real conditions, so battery effects we don't model can make a real run differ a little.</li>
+      <li><b>Predbat (replay).</b> Predbat's real planner, run on the same saved forecasts and prices at every half hour, with its default settings. Its first action is applied to the real day. It isn't Predbat running live on Dad's system, and it is scored once a day, so it appears on finished days only, not on today's scoreboard.</li>
+      <li><b>Perfect hindsight.</b> The best schedule possible if the whole day were known in advance. Nobody can reach it; it shows how much was on the table.</li>
+      <li><b>Plain overnight fill.</b> A basic inverter that fills the battery in the cheap window and then just uses it. A yardstick for how smart Solis AI is being.</li>
+      <li>All four are costed the same way: money for grid power, plus battery wear, with the energy left in the battery at the end valued so a run that ends fuller isn't punished.</li>
+      <li>Export is <span id="exportState">off</span>, so none of the four assumes selling to the grid.</li>
+    </ul>
+  </section>
+  </div>
+
+  <div id="viewBr" hidden>
+    <section aria-label="Our software">
+      <h2>Our software</h2>
+      <div class="sub">What our planner is doing right now and why, what it has learned from real data, what information is reaching it, and what has changed. It only reads; it controls nothing.</div>
+      <div id="brMsg" class="banner" style="margin-top:10px" hidden></div>
+      <div id="brOut"></div>
+    </section>
+  </div>
+  <div id="viewTf" hidden>
+    <section aria-label="Tariffs">
+      <h2>Tariff comparison</h2>
+      <div class="sub">Your real half-hour grid purchases from recent days, priced again on every Octopus, EDF and E.ON Next deal open to new customers (time-of-use ones included) in your area, next to what the current deal cost. Read-only: it only looks at public prices.</div>
+      <div class="daybar"><button class="btn primary" id="tfScan" hidden>Scan deals now</button><label class="sub" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="tfOnlyOk" checked> Only deals we can actually get</label><span class="sub" id="tfMsg"></span></div>
+      <div id="tfOut"></div>
+    </section>
+  </div>
+  <div id="viewCar" hidden>
+    <section aria-label="Cars">
+      <h2>Electric cars</h2>
+      <div class="sub">Advice only: Intelligent Go does the charging, this says which car should go on the charger which night so neither runs low. It never talks to a car or a charger.</div>
+      <div id="carMsg" class="banner" style="margin-top:10px" hidden></div>
+      <div id="carOut"></div>
+    </section>
+  </div>
+  <div id="viewSh" hidden>
+    <section aria-label="Summerhouse">
+      <h2>Summerhouse</h2>
+      <div class="sub">Watching how the summerhouse heats up and loses heat, with the weather taken into account (outside temperature, wind speed and direction, sunshine and rain). It only reads; it switches nothing.</div>
+      <div id="shMsg" class="banner" style="margin-top:10px" hidden></div>
+      <div id="shNow" class="grid2" style="margin-top:10px"></div>
+      <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Last 48 hours</h2><div class="legend" id="shLegend"></div><div class="chart" id="chSh"></div><div id="shHeat" style="margin-top:4px"></div><div class="sub" id="shHeatNote"></div></div>
+      <div class="card" style="margin-top:14px"><h2 style="font-size:14px">What it has learned</h2><ul class="q" id="shLearn"></ul></div>
+      <div class="card" id="shCalc" style="margin-top:14px" hidden><h2 style="font-size:14px">Try it</h2><div class="sub">How long would it take, using what it has learned? Change the numbers.</div><div id="shInputs" class="shin"></div><div id="shOut" style="margin-top:10px"></div></div>
+      <div class="card scroll" style="margin-top:14px"><h2 style="font-size:14px">Weather expected over the next 24 hours</h2><div class="sub">Outside temperature (°C), wind (m/s) and sunshine (W/m²).</div><table id="tblShFc" style="width:100%"></table></div>
+    </section>
+  </div>
+
+  <div id="viewAct" hidden>
+    <section aria-label="Activity">
+      <h2>Activity</h2>
+      <div class="sub">What the timers have been doing today. Each mark is one run: green worked, red failed, hollow is due later today. Nothing here can change anything; it only reports.</div>
+      <div id="actStatus" class="banner" style="margin-top:10px"></div>
+      <div class="card" style="margin-top:14px"><div id="actTimeline"></div><div class="sub" id="actLegend" style="margin-top:6px"></div></div>
+      <div class="card scroll" style="margin-top:14px"><table id="tblAct"></table></div>
+    </section>
+  </div>
+
+  <div id="viewLog" hidden>
+    <section aria-label="Daily log">
+      <h2>Daily log</h2>
+      <div class="sub">One row per finished day: what Dad's house really cost on Octopus (energy bought from the grid, plus the standing charge) against what the same electricity would have cost with no solar and no battery, on the yardstick you choose.</div>
+      <div id="logTotals" class="grid2" style="margin-top:10px"></div>
+      <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Compare against</h2><select id="logBench" aria-label="Compare against" style="width:100%;margin-top:6px;font:inherit;font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid var(--axis);background:var(--page);color:var(--ink)"></select><div id="logCompare" style="margin-top:10px"></div></div>
+      <div class="card" id="cardCum" style="margin-top:14px"><h2 style="font-size:14px">Running total saved</h2><div class="chart" id="chLogCum"></div></div>
+      <div class="card scroll" style="margin-top:14px"><table id="tblLog"></table></div>
+      <div class="sub" id="logNote" style="margin-top:8px"></div>
+    </section>
+  </div>
+
+  <div id="viewSetup" hidden>
+    <section>
+      <h2>Setup</h2>
+      <div class="sub">Everything needed to get going, in one place. Keys are stored privately in this Google project and are never shown again, in the page or in any message.</div>
+      <div class="card" style="margin-top:10px"><h2 style="font-size:14px">Is it running?</h2><ul class="q" id="setupStatus"></ul></div>
+    </section>
+    <section><h2>Share a view-only link</h2><div class="sub">Gives someone you trust (such as Dad) the live dashboard and nothing else: no keys, no buttons. Anyone with the link can look, so send it privately. Making a new link cancels the old one.</div>
+      <div class="card" style="margin-top:10px"><div class="btns" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" type="button" id="linkMake">Create a new link</button><button class="btn" type="button" id="linkDrop">Remove the link</button></div>
+      <div id="linkOut" class="sub" style="margin-top:8px"></div></div></section>
+    <section><h2>Tools</h2><div class="sub">Nothing here can change the inverter or Solis AI. The one thing the app ever sends is the summerhouse heater's own target, unchanged, to wake it.</div>
+      <div class="card" style="margin-top:10px;padding-top:4px;padding-bottom:4px"><div id="actions"></div></div><div id="actOut"></div></section>
+    <section><h2>Settings</h2><div class="sub">Open a section to change it. Secret values are stored privately and never shown again.</div><div id="setupGroups"></div></section>
+    <details class="setgrp"><summary>Fixed settings (in the code)</summary><div class="body"><div class="sub" style="margin:0 0 6px">Shown so you can check them. Ask for a change if any is wrong.</div><ul class="q" id="cfgList"></ul></div></details>
+  </div>
+  <footer id="foot"></footer>
+</div>
+<div id="tipHost"></div>
+
+<script src="config.js"></script>
+<script>
+(function () {
+  // Where the data comes from and who is looking. Keys live in the link (?k= for view, #o= for owner) and are kept in this browser.
+  window.__STATIC__ = true;
+  function st(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ''; localStorage.setItem(k, v); } catch (e) {} return ''; }
+  var q = new URLSearchParams(location.search), hs = new URLSearchParams(location.hash.replace(/^#/, ''));
+  var k = q.get('k') || '', o = hs.get('o') || '';
+  if (k) st('vk', k); else k = st('vk');
+  if (o) st('ok', o); else o = st('ok');
+  window.__ACCESS__ = { owner: !!o, key: o ? '' : k };
+  window.__API__ = { url: (window.APP_CONFIG || {}).execUrl || '', owner: o };
+})();
+</script>
+<nav class="botbar" id="botbar" aria-label="Main">
+  <button data-t="dash" aria-selected="true"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</button>
+  <button data-t="log" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Daily log</button>
+  <button data-t="tf" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>Tariffs</button>
+  <button data-t="car" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>Cars</button>
+  <button data-t="more" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>More</button>
+</nav>
+<div class="sheet" id="moreSheet" hidden><button data-t="act">Activity</button><button data-t="br">Our software</button><button data-t="sh">Summerhouse</button><button data-t="setup">Setup</button><button id="themeBtn" type="button">Appearance</button></div>
+<div class="ptr" id="ptr">Pull down to refresh</div>
+<script>
+(function () {
+  try { if (window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches)) document.documentElement.classList.add('standalone'); } catch (e) {}
+  // Home Screen app: iOS draws a white clock bar over Apps Script pages, so default to the light look there (it blends in). The More menu switches it.
+  var themePref = ''; try { themePref = localStorage.getItem('theme') || ''; } catch (e) {}
+  function applyTheme() { var sa = document.documentElement.classList.contains('standalone'), t = themePref || (window.__STATIC__ ? 'dark' : sa ? 'light' : ''); if (t) document.documentElement.setAttribute('data-theme', t); else document.documentElement.removeAttribute('data-theme'); var b = document.getElementById('themeBtn'); if (b) b.textContent = 'Appearance: ' + (t === 'dark' ? 'Dark' : t === 'light' ? 'Light' : 'Automatic') + '. Tap to change'; }
+  applyTheme();
+  var D = null, TZ = 'Europe/London', ACC = window.__ACCESS__ || { owner: true, key: '' };
+  var C = { solis: 'var(--solis)', ours: 'var(--ours)', perfect: 'var(--perfect)', plain: 'var(--plain)', predbat: 'var(--predbat)' };
+  var NAMES = { solis: 'Solis AI (actual)', ours: 'Our software (replay)', predbat: 'Predbat (replay)', perfect: 'Perfect hindsight (benchmark)', plain: 'Plain overnight fill (reference)' };
+  var SUBS = { solis: 'What really happened', ours: 'Only the forecasts it had at the time', predbat: 'Predbat\'s own planner, same forecasts', perfect: 'Whole day known in advance', plain: 'Fill in the cheap window, then self-use' };
+  var $ = function (id) { return document.getElementById(id); };
+
+  function el(tag, attrs, text) { var e = document.createElement(tag); if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); if (text !== undefined) e.textContent = text; return e; }
+  function svg(tag, attrs, text) { var e = document.createElementNS('http://www.w3.org/2000/svg', tag); if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); if (text !== undefined) e.textContent = text; return e; }
+  function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
+  function gbp(p, sign) { if (p === null || p === undefined || isNaN(p)) return '–'; var v = p / 100, s = v < 0 ? '-' : (sign && v > 0 ? '+' : ''); return s + '£' + Math.abs(v).toFixed(2); }
+  function fmt(n, d) { return n === null || n === undefined || n === '' || isNaN(n) ? '–' : Number(n).toFixed(d); }
+  function hhmm(ms) { return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(ms)); }
+  function dayLabel(ds) { var p = ds.split('-'); return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]))); }
+  function ago(min) { return min < 1 ? 'just now' : min < 90 ? Math.round(min) + ' min ago' : Math.round(min / 60) + ' h ago'; }
+
+  // ---------------------------------------------------------------- tooltip
+  if (!ACC.owner) { $('tabSetup').hidden = true; }
+  var tip = el('div', { class: 'tip', role: 'status' });
+  document.body.appendChild(tip);
+  function showTip(host, x, title, rows) {
+    clear(tip); tip.appendChild(el('div', { class: 't' }, title));
+    rows.forEach(function (r) {
+      var row = el('div', { class: 'r' }), left = el('span'), key = el('span', { class: 'key' });
+      key.style.background = r.color; left.appendChild(key); left.appendChild(document.createTextNode(r.name)); row.appendChild(left); row.appendChild(el('b', null, r.value)); tip.appendChild(row);
+    });
+    tip.style.display = 'block';
+    var hr = host.getBoundingClientRect(), tw = tip.offsetWidth, px = hr.left + window.scrollX + x + 14;
+    if (x + 14 + tw > hr.width) px = hr.left + window.scrollX + x - tw - 14;
+    tip.style.left = Math.max(4, px) + 'px'; tip.style.top = (hr.top + window.scrollY + 8) + 'px';
+  }
+  function hideTip() { tip.style.display = 'none'; }
+
+  // ---------------------------------------------------------------- charts
+  function frame(host, o) {
+    var W = Math.max(260, host.clientWidth || 600), H = o.h || 220, m = { l: o.yw || 46, r: o.right || 12, t: 10, b: 26 };
+    var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, height: H, role: 'img', 'aria-label': o.label || 'chart' });
+    return { s: s, W: W, H: H, m: m, iw: W - m.l - m.r, ih: H - m.t - m.b };
+  }
+  function yScale(f, lo, hi) { return function (v) { return f.m.t + f.ih - (v - lo) / (hi - lo) * f.ih; }; }
+  function niceTicks(lo, hi, n) {
+    var span = hi - lo || 1, step = Math.pow(10, Math.floor(Math.log10(span / n))), err = span / n / step;
+    step *= err >= 7 ? 10 : err >= 3 ? 5 : err >= 1.5 ? 2 : 1;
+    var a = Math.floor(lo / step) * step, out = []; for (var v = a; v <= hi + 1e-9; v += step) out.push(Math.round(v * 1e6) / 1e6);
+    return out;
+  }
+  function axes(f, lo, hi, yFmt, xTicks, ticks) {
+    var y = yScale(f, lo, hi);
+    (ticks || niceTicks(lo, hi, 4)).forEach(function (t) {
+      if (t < lo - 1e-9 || t > hi + 1e-9) return;
+      f.s.appendChild(svg('line', { x1: f.m.l, x2: f.W - f.m.r, y1: y(t), y2: y(t), stroke: 'var(--grid)', 'stroke-width': 1 }));
+      f.s.appendChild(svg('text', { x: f.m.l - 8, y: y(t) + 4, 'text-anchor': 'end', fill: 'var(--muted)', 'font-size': 11.5 }, yFmt(t)));
+    });
+    f.s.appendChild(svg('line', { x1: f.m.l, x2: f.W - f.m.r, y1: y(Math.max(lo, 0)), y2: y(Math.max(lo, 0)), stroke: 'var(--axis)', 'stroke-width': 1 }));
+    xTicks.forEach(function (t) { f.s.appendChild(svg('text', { x: t.x, y: f.H - 7, 'text-anchor': t.x + 34 > f.W ? 'end' : (t.x - 34 < 0 ? 'start' : 'middle'), fill: 'var(--muted)', 'font-size': 11.5 }, t.label)); });
+    return y;
+  }
+
+  /** series: [{name,color,values:[num|null],dash}]  x: array of labels (one per index) */
+  function lineChart(host, o) {
+    clear(host);
+    var f = frame(host, o), n = o.x.length, all = [];
+    o.series.forEach(function (s) { s.values.forEach(function (v) { if (v !== null && v !== undefined && !isNaN(v)) all.push(v); }); });
+    if (!all.length) { host.appendChild(el('div', { class: 'empty' }, o.empty || 'No data yet.')); return; }
+    var lo = o.yMin !== undefined ? o.yMin : Math.min.apply(null, all), hi = o.yMax !== undefined ? o.yMax : Math.max.apply(null, all);
+    if (hi - lo < 1e-9) { hi = lo + 1; }
+    if (o.yMin === undefined) { var pad = (hi - lo) * .08; lo -= pad; hi += pad; }
+    var xs = function (i) { return f.m.l + (n <= 1 ? f.iw / 2 : i / (n - 1) * f.iw); };
+    var xt = (o.xTickIdx || []).map(function (i) { return { x: xs(i), label: o.x[i] }; });
+    var y = axes(f, lo, hi, o.yFmt, xt, o.yTicks);
+    if (o.shade) { var bw0 = f.iw / Math.max(1, n - 1) / 2, a0 = -1; for (var si0 = 0; si0 <= n; si0++) { var on = si0 < n && o.shade[si0]; if (on && a0 < 0) a0 = si0; if (!on && a0 >= 0) { f.s.appendChild(svg('rect', { x: xs(a0) - bw0, y: f.m.t, width: xs(si0 - 1) - xs(a0) + 2 * bw0, height: f.ih, fill: 'var(--perfect)', opacity: .12 })); a0 = -1; } } }
+    var ends = [];
+    o.series.forEach(function (s, si) {
+      var d = '', last = -1, started = false;
+      s.values.forEach(function (v, i) {
+        if (v === null || v === undefined || isNaN(v)) { started = false; return; }
+        d += (started ? 'L' : 'M') + xs(i).toFixed(1) + ' ' + y(v).toFixed(1); started = true; last = i;
+      });
+      if (o.area && o.series.length === 1 && last >= 0) {
+        var first = s.values.findIndex(function (v) { return v !== null && v !== undefined; });
+        f.s.appendChild(svg('path', { d: d + 'L' + xs(last) + ' ' + y(lo) + 'L' + xs(first) + ' ' + y(lo) + 'Z', fill: s.color, opacity: .10 }));
+      }
+      var p = svg('path', { d: d, fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
+      if (s.dash) p.setAttribute('stroke-dasharray', s.dash);
+      f.s.appendChild(p);
+      if (last >= 0) { ends.push({ s: s, x: xs(last), y: y(s.values[last]), v: s.values[last] }); }
+    });
+    ends.forEach(function (e) { f.s.appendChild(svg('circle', { cx: e.x, cy: e.y, r: 4, fill: e.s.color, stroke: 'var(--surface)', 'stroke-width': 2 })); });
+    // direct end labels, only when they do not collide (otherwise the legend and tooltip carry identity)
+    if (o.right && ends.length) {
+      var ys = ends.map(function (e) { return e.y; }).sort(function (a, b) { return a - b; }), ok = true;
+      for (var i = 1; i < ys.length; i++) if (ys[i] - ys[i - 1] < 14) ok = false;
+      if (ok) ends.forEach(function (e) { f.s.appendChild(svg('text', { x: e.x + 9, y: e.y + 4, fill: 'var(--ink2)', 'font-size': 12 }, o.endLabel ? o.endLabel(e.s, e.v) : o.yFmt(e.v))); });
+    }
+    // hover: crosshair snaps to the nearest index, one tooltip lists every series
+    var cross = svg('line', { y1: f.m.t, y2: f.m.t + f.ih, stroke: 'var(--muted)', 'stroke-width': 1, opacity: 0 });
+    f.s.appendChild(cross);
+    var hit = svg('rect', { x: f.m.l, y: f.m.t, width: f.iw, height: f.ih, fill: 'transparent', tabindex: 0 });
+    function move(ev) {
+      var r = f.s.getBoundingClientRect(), px = (ev.clientX - r.left) * (f.W / r.width);
+      var idx = Math.max(0, Math.min(n - 1, Math.round((px - f.m.l) / f.iw * (n - 1))));
+      cross.setAttribute('x1', xs(idx)); cross.setAttribute('x2', xs(idx)); cross.setAttribute('opacity', 1);
+      var rows = o.series.map(function (s) { var v = s.values[idx]; return { name: s.name, color: s.color, value: v === null || v === undefined || isNaN(v) ? '–' : o.yFmt(v, true) }; });
+      showTip(host, xs(idx) * (r.width / f.W), o.tipTitle ? o.tipTitle(idx) : o.x[idx], rows);
+    }
+    hit.addEventListener('pointermove', move); hit.addEventListener('pointerdown', move);
+    hit.addEventListener('pointerleave', function () { cross.setAttribute('opacity', 0); hideTip(); });
+    f.s.appendChild(hit); host.appendChild(f.s);
+  }
+
+  /** columns: values[] (can be negative), colorFor(i), one tooltip per bar */
+  function barChart(host, o) {
+    clear(host);
+    var f = frame(host, o), n = o.values.length;
+    if (!n) { host.appendChild(el('div', { class: 'empty' }, 'No plan yet.')); return; }
+    var vv = o.values.map(function (v) { return v === null || v === undefined || isNaN(v) ? 0 : v; }), hi = Math.max.apply(null, vv.concat([o.min || 1])), lo = Math.min.apply(null, vv.concat([0]));
+    var xs = function (i) { return f.m.l + (i + .5) / n * f.iw; };
+    var xt = (o.xTickIdx || []).map(function (i) { return { x: xs(i), label: o.x[i] }; });
+    var y = axes(f, lo, hi, o.yFmt, xt);
+    var bw = Math.min(14, f.iw / n - 2);
+    o.values.forEach(function (v, i) {
+      if (v === null || v === undefined || isNaN(v)) return;
+      var y0 = y(0), y1 = y(v), top = Math.min(y0, y1), h = Math.max(1, Math.abs(y1 - y0)), r = 3;
+      var rect = svg('rect', { x: xs(i) - bw / 2, y: top, width: bw, height: h, fill: o.colorFor(i), rx: Math.min(r, h / 2) });
+      var hitr = svg('rect', { x: xs(i) - f.iw / n / 2, y: f.m.t, width: f.iw / n, height: f.ih, fill: 'transparent' });
+      hitr.addEventListener('pointermove', function () { var r2 = f.s.getBoundingClientRect(); rect.setAttribute('opacity', .75); showTip(host, xs(i) * (r2.width / f.W), o.x[i], o.tip(i)); });
+      hitr.addEventListener('pointerleave', function () { rect.setAttribute('opacity', 1); hideTip(); });
+      f.s.appendChild(rect); f.s.appendChild(hitr);
+    });
+    host.appendChild(f.s);
+  }
+
+  function legend(host, items) {
+    clear(host);
+    items.forEach(function (it) { var s = el('span'), i = el('i'); i.style.background = it.color; if (it.dash) { i.style.background = 'transparent'; i.style.borderTop = '3px dotted ' + it.color; i.style.height = '0'; } s.appendChild(i); s.appendChild(document.createTextNode(it.name)); host.appendChild(s); });
+  }
+  function table(host, head, rows) {
+    clear(host); var t = el('table'), tr = el('tr');
+    head.forEach(function (h) { tr.appendChild(el('th', null, h)); }); t.appendChild(tr);
+    rows.forEach(function (r) { var x = el('tr'); r.forEach(function (c) { x.appendChild(el('td', null, c)); }); t.appendChild(x); });
+    host.appendChild(t);
+  }
+
+  // ---------------------------------------------------------------- sections
+  function banner(kind, icon, text) { var b = el('div', { class: 'banner ' + kind }); b.appendChild(el('span', { class: 'ic' }, icon)); b.appendChild(el('span', null, text)); $('banners').appendChild(b); }
+
+  function renderHero() {
+    var ok = (D.daily || []).filter(function (r) { return r.status === 'ok'; });
+    if (!ok.length) { $('heroNum').textContent = '–'; $('heroLbl').textContent = 'Waiting for the first finished day.'; $('heroSub').textContent = 'A day counts once it has good readings and saved forecasts for nearly every half hour. The first one appears about 00:20 after the first full day of readings.'; return; }
+    var sv = 0, pot = 0, ours = 0, solis = 0;
+    ok.forEach(function (r) { sv += r.solis_cost_p - r.ours_cost_p; pot += r.solis_cost_p - r.perfect_cost_p; ours += r.ours_cost_p; solis += r.solis_cost_p; });
+    $('heroNum').textContent = gbp(sv, true);
+    $('heroNum').style.color = sv >= 0 ? 'var(--success-text)' : 'var(--crit)';
+    $('heroLbl').textContent = (sv >= 0 ? 'Our software would have cost this much less than Solis AI' : 'Our software would have cost this much more than Solis AI') + ' over ' + ok.length + ' finished day' + (ok.length === 1 ? '' : 's') + '.';
+    var cap = pot > 20 ? Math.round(sv / pot * 100) + '% of the ' + gbp(pot) + ' that a perfect schedule would have saved.' : 'Too little on the table yet to say how close it gets to perfect.';
+    var pb = ok.filter(function (r) { return r.predbat_cost_p !== null && r.predbat_cost_p !== undefined; }), pbTxt = '';
+    if (pb.length) { var o2 = 0, p2 = 0; pb.forEach(function (r) { o2 += r.solis_cost_p - r.ours_cost_p; p2 += r.solis_cost_p - r.predbat_cost_p; }); pbTxt = ' On the ' + pb.length + ' day' + (pb.length === 1 ? '' : 's') + ' Predbat has been replayed: ours ' + gbp(o2, true) + ' against Solis AI, Predbat ' + gbp(p2, true) + '.'; }
+    $('heroSub').textContent = cap + ' Solis AI cost ' + gbp(solis) + ' in total; ours ' + gbp(ours) + '.' + pbTxt;
+  }
+
+  function renderKpis() {
+    var L = D.live, k = $('kpis'); clear(k);
+    function tile(label, value, sub) { var t = el('div', { class: 'tile' }); t.appendChild(el('div', { class: 'k' }, label)); t.appendChild(el('div', { class: 'v' }, value)); t.appendChild(el('div', { class: 's' }, sub || '')); k.appendChild(t); }
+    if (!L) { tile('Battery', '–', 'Waiting for the first Solis reading'); tile('Rate now', fmt(D.rateNowP, 1) + 'p', D.tariff); return; }
+    var grid = L.gridKw;
+    tile('Battery', fmt(L.socPct, 0) + '%', fmt(L.socPct / 100 * D.capKwh, 1) + ' of ' + fmt(D.capKwh, 1) + ' kWh usable');
+    tile('Solar', fmt(L.pvKw, 1) + ' kW', fmt(L.pvTodayKwh, 1) + ' kWh today');
+    tile('House', fmt(L.loadKw, 1) + ' kW', 'using now');
+    tile('Grid', grid === null ? '–' : fmt(Math.abs(grid), 1) + ' kW', grid === null ? '' : (grid > 0.05 ? 'importing' : grid < -0.05 ? 'exporting' : 'idle') + ' · ' + fmt(L.importTodayKwh, 1) + ' kWh bought today');
+    tile('Rate now', fmt(D.rateNowP, 1) + 'p', D.tariff);
+  }
+
+  // ---- day picker: null = follow today, otherwise a yyyy-mm-dd the person chose
+  var selDate = null, dayPack = null, dayReq = 0;
+  function pastPack() { return dayPack && selDate && dayPack.date === selDate && dayPack.date < dayPack.maxDate ? dayPack : null; }
+  function viewT() {
+    var P = pastPack();
+    if (!P) return D.today;
+    if (P.error) return { error: P.error, past: true };
+    return { date: P.date, startMs: P.startMs, endMs: P.startMs + P.n * 1800e3, costP: P.costP, paths: P.paths, ok: P.oursReliable && P.coverage >= 0.9, coverage: P.coverage, forecastCoverage: P.forecastCoverage, past: true };
+  }
+  function renderToday() {
+    var T = viewT(), bars = $('scoreBars'); clear(bars);
+    $('todayH').textContent = pastPack() || (dayPack && dayPack.error && selDate && selDate < dayPack.maxDate) ? dayLabel(selDate) : 'Today so far';
+    if (!T || T.error) {
+      bars.appendChild(el('div', { class: 'empty' }, T && T.past ? T.error : T && T.error ? 'Today cannot be scored yet: ' + T.error + '.' : 'Today\'s scoreboard appears after the first few hours of readings.'));
+      lineChart($('chToday'), { x: [], series: [], yFmt: String, empty: 'Appears once the day has readings.' }); legend($('todayLegend'), []); return;
+    }
+    var PB = T.predbat, keys = PB ? ['solis', 'ours', 'predbat', 'perfect', 'plain'] : ['solis', 'ours', 'perfect', 'plain'], cost = PB ? PB.costP : T.costP, upTo = PB ? PB.endMs : T.endMs;
+    var base = cost.perfect, max = Math.max.apply(null, keys.map(function (k) { return cost[k] - base; }).concat([1]));
+    keys.forEach(function (k) {
+      var row = el('div', { class: 'row' }), nm = el('div', { class: 'name' }, NAMES[k]); nm.appendChild(el('small', null, SUBS[k]));
+      var tr = el('div', { class: 'track' }), w = (cost[k] - base) / max * 40, bar = el('div', { class: 'bar' });
+      bar.style.width = Math.max(0, w) + '%'; bar.style.background = C[k];
+      var val = el('div', { class: 'val' }, gbp(cost[k]) + (k === 'perfect' ? '  (best)' : '  (+' + gbp(cost[k] - base) + ')'));
+      val.style.left = 'calc(' + Math.max(0, w) + '% + 2px)';
+      tr.appendChild(bar); tr.appendChild(val); row.appendChild(nm); row.appendChild(tr); bars.appendChild(row);
+    });
+    var d = cost.solis - cost.ours, was = T.past ? 'that day' : 'today';
+    $('scoreNote').textContent = (T.ok ? '' : 'Provisional: readings cover ' + Math.round((T.coverage || 0) * 100) + '% of ' + was + ' and saved forecasts ' + Math.round((T.forecastCoverage || 0) * 100) + '%. ') +
+      'Figures in brackets are the extra cost over the perfect-hindsight benchmark. ' + (T.past ? 'That day: ' : 'So far today: ') + (d >= 0 ? 'ours is ' + gbp(d) + ' cheaper than Solis AI.' : 'Solis AI is ' + gbp(-d) + ' cheaper than ours.') + ' Money for grid power plus battery wear, up to ' + hhmm(upTo) + (PB ? ' (Predbat updates about once an hour, so all the bars stop at the time of its latest answer).' : '.');
+    $('todaySub').textContent = (PB ? 'Five' : 'Four') + ' ways of running ' + dayLabel(T.date) + ', on the same real solar, house use and prices.';
+    var n = 49, xl = [], i; for (i = 0; i < n; i++) xl.push(hhmm(T.startMs + i * 1800e3));
+    var ser = keys.map(function (k) { var p = k === 'predbat' ? PB.pathPct : (T.paths[k === 'solis' ? 'actual' : k] || []); var v = []; for (i = 0; i < n; i++) v.push(p[i] === undefined ? null : p[i]); return { name: NAMES[k].replace(/ \(.*\)/, ''), color: C[k], values: v }; });
+    legend($('todayLegend'), ser);
+    lineChart($('chToday'), { x: xl, series: ser, yMin: 0, yMax: 100, yTicks: [0, 25, 50, 75, 100], yFmt: function (v) { return Math.round(v) + '%'; }, xTickIdx: ($('chToday').clientWidth < 460 ? [0, 16, 32, 48] : [0, 8, 16, 24, 32, 40, 48]), right: 0, label: 'Battery level today for each way of running it' });
+    table($('tblToday'), ['Time'].concat(ser.map(function (s) { return s.name; })), xl.map(function (t, j) { return [t].concat(ser.map(function (s) { return s.values[j] === null ? '–' : fmt(s.values[j], 0) + '%'; })); }).filter(function (_, j) { return j % 2 === 0; }));
+  }
+
+  // ---- day details: half-hour charts, notes, hour table, date controls
+  function dayKey() { return (window.__ACCESS__ || {}).key || ''; }
+  function loadDay(ds) {
+    selDate = ds; var id = ++dayReq; $('dayMsg').textContent = 'Loading…';
+    gs('getDay', [dayKey(), ds || ''], function (p) { if (id !== dayReq) return; dayPack = p; if (!ds) selDate = null; $('dayMsg').textContent = ''; renderDay(); },
+      function (m) { if (id !== dayReq) return; $('dayMsg').textContent = 'Could not load that day: ' + m; });
+  }
+  function shiftDay(delta) {
+    var cur = (dayPack && dayPack.date) || (D.today && D.today.date); if (!cur) return;
+    var p = cur.split('-'), t = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + delta)), ds = t.toISOString().slice(0, 10);
+    var lo = dayPack && dayPack.minDate, hi = dayPack && dayPack.maxDate; if ((lo && ds < lo) || (hi && ds > hi)) return;
+    loadDay(hi && ds === hi ? null : ds);
+  }
+  $('dayPrev').onclick = function () { shiftDay(-1); };
+  $('dayNext').onclick = function () { shiftDay(1); };
+  $('dayToday').onclick = function () { loadDay(null); };
+  $('dayDate').onchange = function () { var v = $('dayDate').value; if (v) loadDay(dayPack && v >= dayPack.maxDate ? null : v); };
+  function renderDay() {
+    var P = dayPack; if (!P) return;
+    var di = $('dayDate'); di.min = P.minDate; di.max = P.maxDate; di.value = P.date;
+    $('dayPrev').disabled = P.date <= P.minDate; $('dayNext').disabled = P.date >= P.maxDate; $('dayToday').disabled = P.date >= P.maxDate;
+    renderToday(); renderDayCharts();
+  }
+  function renderDayCharts() {
+    var P = dayPack, ids = ['chDayPow', 'chDayPrice', 'chDayGrid', 'chDayBatt'], notes = $('dayNotes'); clear(notes); notes.className = 'daynote';
+    if (!P) return;
+    if (P.error) { ids.forEach(function (id) { clear($(id)); $(id).appendChild(el('div', { class: 'empty' }, 'Nothing to draw for this day.')); }); clear($('tblDay')); $('daySummary').textContent = ''; return; }
+    var N = Math.max(48, P.n), pad = function (a) { var o = []; for (var i = 0; i < N; i++) o.push(a && a[i] !== undefined ? a[i] : null); return o; };
+    var x = []; for (var i = 0; i < N; i++) x.push(hhmm(P.startMs + i * 1800e3));
+    var tk = $('chDayPow').clientWidth < 460 ? [0, 12, 24, 36] : [0, 8, 16, 24, 32, 40];
+    var T = P.totals || {}, parts = [dayLabel(P.date) + ': solar made ' + fmt(T.pvKwh, 1) + ' kWh, house used ' + fmt(T.loadKwh, 1) + ' kWh, bought ' + fmt(T.importKwh, 1) + ' kWh (' + fmt(T.importCheapKwh, 1) + ' at the cheap rate), sold ' + fmt(T.exportKwh, 1) + ' kWh.'];
+    if (T.socStartPct !== null && T.socStartPct !== undefined) parts.push('Battery went from ' + fmt(T.socStartPct, 0) + '% to ' + fmt(T.socEndPct, 0) + '%.');
+    $('daySummary').textContent = parts.join(' ');
+    var warn = [];
+    if (P.coverage < 0.95) warn.push((P.fullDay ? 'Readings cover ' : 'So far, readings cover ') + Math.round(P.coverage * 100) + '% of this day' + (P.date < P.maxDate ? ' (the app was not running for all of it)' : '') + '. Gaps are left blank, not guessed.');
+    if (P.histReadings) warn.push(P.histReadings + ' readings were filled in from SolisCloud.');
+    if (P.canFill) warn.push('Press "Load past days from Solis" in Setup to fill the missing part.');
+    if (P.forecastCoverage !== undefined && !P.oursReliable) warn.push('We did not save forecasts for all of this day, so the "ours" line is only approximate.');
+    if (warn.length) { notes.textContent = warn.join(' '); if (P.coverage < 0.95) notes.className = 'daynote warn'; }
+    var LV = P.live, lc = $('liveCard'); clear(lc); lc.hidden = !LV;
+    if (LV) {
+      var pf = function (p) { return pounds(p); };
+      lc.appendChild(el('div', { class: 'sub' }, P.fullDay ? 'What ' + dayLabel(P.date) + ' cost' : 'Cost so far today'));
+      lc.appendChild(el('div', { class: 'num', style: 'font-size:28px;font-weight:650' }, pf(LV.totalP)));
+      lc.appendChild(el('div', { class: 'sub', style: 'line-height:1.5' }, 'Bought ' + pf(LV.importP) + ' (' + fmt(LV.cheapKwh, 1) + ' kWh at the cheap rate, ' + fmt(LV.otherKwh, 1) + ' kWh at the day rate), sold ' + pf(LV.exportP) + (P.live.exportP < 1 ? ' (export not approved yet)' : '') + ', standing charge ' + pf(LV.standingP) + '.'));
+      if (LV.proj) lc.appendChild(el('div', { style: 'margin-top:8px' }, 'On track for about ' + pf(LV.proj.totalP) + ' by midnight' + (LV.proj.days > 1 ? ' (between ' + pf(LV.proj.lowP) + ' and ' + pf(LV.proj.highP) + ' on the pattern of the last ' + LV.proj.days + ' days)' : ' (from the pattern of yesterday)') + '.'));
+      else if (!P.fullDay) lc.appendChild(el('div', { class: 'sub', style: 'margin-top:8px' }, 'The end-of-day estimate appears once a few finished days are saved.'));
+      var cs = P.costP;
+      if (cs && cs.plain !== undefined) { var sv = cs.plain - cs.solis; lc.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, (P.fullDay ? 'That day' : 'So far') + ', plain overnight charging would have cost ' + pf(cs.plain) + ' against ' + pf(cs.solis) + ' as Solis ran it: ' + (sv >= 0 ? pf(sv) + ' saved.' : pf(-sv) + ' more.'))); }
+    }
+    var sc = LV ? LV.slotP : []; var cb = pad(sc);
+    barChart($('chDayCost'), { x: x, values: cb, min: 5, colorFor: function (i) { return cb[i] >= 0 ? 'var(--solis)' : 'var(--perfect)'; }, yFmt: function (v) { return fmt(v, 0) + 'p'; }, xTickIdx: tk, h: 180, label: 'Cost of each half hour in pence',
+      tip: function (i) { return [{ name: 'Net cost', color: 'var(--solis)', value: cb[i] === null ? '–' : fmt(cb[i], 1) + 'p' }]; } });
+    var cheap = pad(P.cheap).map(function (v) { return !!v; });
+    lineChart($('chDayPow'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'House used', color: 'var(--solis)', values: pad(P.loadKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 240, label: 'Solar made and house used through the day' });
+    lineChart($('chDayPrice'), { x: x, series: [{ name: 'Pay per unit', color: 'var(--plain)', values: pad(P.impP) }, { name: 'Paid for export', color: 'var(--perfect)', values: pad(P.expP) }], yMin: 0, shade: cheap, yFmt: function (v) { return fmt(v, 1) + 'p'; }, xTickIdx: tk, h: 180, label: 'Import and export price' });
+    var imp = pad(P.importKwh), exp = pad(P.exportKwh), ch = pad(P.chargeKwh), dis = pad(P.dischargeKwh);
+    var net = imp.map(function (v, i) { return v === null ? null : v - (exp[i] || 0); });
+    barChart($('chDayGrid'), { x: x, values: net, min: 0.5, colorFor: function (i) { return net[i] >= 0 ? 'var(--solis)' : 'var(--perfect)'; }, yFmt: function (v) { return fmt(v, 1); }, xTickIdx: tk, h: 180, label: 'Grid bought (up) and sold (down), kWh per half hour',
+      tip: function (i) { return [{ name: 'Bought', color: 'var(--solis)', value: fmt(imp[i], 2) + ' kWh' }, { name: 'Sold', color: 'var(--perfect)', value: fmt(exp[i], 2) + ' kWh' }]; } });
+    var bn = ch.map(function (v, i) { return v === null ? null : v - (dis[i] || 0); });
+    barChart($('chDayBatt'), { x: x, values: bn, min: 0.5, colorFor: function (i) { return bn[i] >= 0 ? 'var(--ours)' : 'var(--ours-soft)'; }, yFmt: function (v) { return fmt(v, 1); }, xTickIdx: tk, h: 180, label: 'Battery charging (up) and discharging (down), kWh per half hour',
+      tip: function (i) { return [{ name: 'Charged', color: 'var(--ours)', value: fmt(ch[i], 2) + ' kWh' }, { name: 'Discharged', color: 'var(--ours-soft)', value: fmt(dis[i], 2) + ' kWh' }]; } });
+    var rows = [], pv = pad(P.pvKw), ld = pad(P.loadKw), ip = pad(P.impP), act = P.paths.actual || [];
+    function sum(a, i) { var s = 0, any = false; [i, i + 1].forEach(function (j) { if (a[j] !== null && a[j] !== undefined) { s += a[j]; any = true; } }); return any ? s : null; }
+    for (var k = 0; k + 1 < N; k += 2) {
+      var pvk = sum(pv, k), ldk = sum(ld, k);
+      rows.push([x[k], pvk === null ? '–' : fmt(pvk / 2, 2), ldk === null ? '–' : fmt(ldk / 2, 2), sum(imp, k) === null ? '–' : fmt(sum(imp, k), 2), sum(exp, k) === null ? '–' : fmt(sum(exp, k), 2), act[k] === null || act[k] === undefined ? '–' : fmt(act[k], 0) + '%', ip[k] === null ? '–' : fmt(ip[k], 1) + 'p']);
+    }
+    table($('tblDay'), ['From', 'Solar kWh', 'House kWh', 'Bought kWh', 'Sold kWh', 'Battery at start', 'Pay per unit'], rows);
+  }
+
+  function renderPlan() {
+    var P = D.plan || [];
+    if (!P.length) { ['chPlanSoc', 'chPlanPow', 'chPrice'].forEach(function (id) { clear($(id)); $(id).appendChild(el('div', { class: 'empty' }, 'The first plan appears after the first reading.')); }); return; }
+    var Q = P.slice(0, 48), x = Q.map(function (r) { return hhmm(r.t); }), tickIdx = [0, 8, 16, 24, 32, 40];
+    if (D.planNow) $('planSub').textContent = 'Not sent anywhere. Right now it would be: ' + String(D.planNow.action).replace(/_/g, ' ').toLowerCase() + '. Plan made ' + hhmm(D.planNow.time) + '.';
+    lineChart($('chPlanSoc'), { x: x, series: [{ name: 'Battery', color: C.ours, values: Q.map(function (r) { return r.socKwh / D.capKwh * 100; }) }], yMin: 0, yMax: 100, yTicks: [0, 25, 50, 75, 100], area: true, yFmt: function (v) { return Math.round(v) + '%'; }, xTickIdx: tickIdx, label: 'Planned battery level' });
+    barChart($('chPlanPow'), { x: x, values: Q.map(function (r) { return r.battKw; }), min: 1, colorFor: function (i) { return Q[i].battKw >= 0 ? 'var(--ours)' : 'var(--ours-soft)'; }, yFmt: function (v) { return fmt(v, 0) + ' kW'; }, xTickIdx: tickIdx,
+      tip: function (i) { var r = Q[i]; return [{ name: String(r.action).replace(/_/g, ' ').toLowerCase(), color: r.battKw >= 0 ? 'var(--ours)' : 'var(--ours-soft)', value: fmt(r.battKw, 1) + ' kW' }, { name: 'Grid', color: 'var(--muted)', value: fmt(r.gridKw, 1) + ' kW' }]; }, label: 'Planned battery power' });
+    lineChart($('chPrice'), { x: x, series: [{ name: 'Import price', color: C.plain, values: Q.map(function (r) { return r.impP; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 0) + 'p'; }, xTickIdx: tickIdx, h: 150, label: 'Import price' });
+    table($('tblPlan'), ['Time', 'Action', 'Battery kW', 'Grid kW', 'Battery %', 'Import p'], Q.map(function (r, i) { return [x[i], String(r.action).replace(/_/g, ' ').toLowerCase(), fmt(r.battKw, 1), fmt(r.gridKw, 1), fmt(r.socKwh / D.capKwh * 100, 0) + '%', fmt(r.impP, 1)]; }));
+  }
+
+  function renderHistory() {
+    var rows = (D.daily || []).slice(-60), ok = rows.filter(function (r) { return r.status === 'ok'; }), t = $('tblDaily'); clear(t);
+    var head = el('tr'); ['Day', 'Solis AI', 'Ours', 'Predbat', 'Perfect', 'Plain', 'Ours saved', 'Predbat saved', 'Of possible', 'Battery at cheap-rate end (Solis / ours / Predbat / perfect)'].forEach(function (h) { head.appendChild(el('th', null, h)); }); t.appendChild(head);
+    if (!rows.length) { var e = el('tr'), c = el('td', null, 'No finished days yet.'); c.setAttribute('colspan', 10); c.className = 'muted'; e.appendChild(c); t.appendChild(e); }
+    rows.slice().reverse().forEach(function (r) {
+      var tr = el('tr', r.status === 'ok' ? {} : { class: 'partial' }), sv = r.solis_cost_p - r.ours_cost_p, pot = r.solis_cost_p - r.perfect_cost_p;
+      var d1 = el('td', null, dayLabel(r.date)); if (r.status !== 'ok') d1.appendChild(el('span', { class: 'tag', title: r.notes || '' }, 'partial'));
+      tr.appendChild(d1);
+      [r.solis_cost_p, r.ours_cost_p, r.predbat_cost_p, r.perfect_cost_p, r.plain_cost_p].forEach(function (v) { tr.appendChild(el('td', null, gbp(v))); });
+      var s = el('td', { class: sv >= 0 ? 'pos' : 'neg' }, gbp(sv, true)); tr.appendChild(s);
+      var hasP = r.predbat_cost_p !== null && r.predbat_cost_p !== undefined, spb = r.solis_cost_p - r.predbat_cost_p;
+      tr.appendChild(el('td', hasP ? { class: spb >= 0 ? 'pos' : 'neg' } : {}, hasP ? gbp(spb, true) : '–'));
+      tr.appendChild(el('td', null, pot >= 10 ? Math.round(sv / pot * 100) + '%' : '–'));
+      tr.appendChild(el('td', null, fmt(r.soc_cheap_end_solis, 0) + '% / ' + fmt(r.soc_cheap_end_ours, 0) + '% / ' + fmt(r.soc_cheap_end_predbat, 0) + '% / ' + fmt(r.soc_cheap_end_perfect, 0) + '%'));
+      t.appendChild(tr);
+    });
+    var withP = ok.filter(function (r) { return r.predbat_cost_p !== null && r.predbat_cost_p !== undefined; }), useP = withP.length > 0, base = useP ? withP : ok;
+    var cs = 0, cp = 0, cb = 0, xs = [], vs = [], vp = [], vb = [];
+    base.forEach(function (r) { cs += (r.solis_cost_p - r.ours_cost_p) / 100; cp += (r.solis_cost_p - r.perfect_cost_p) / 100; if (useP) cb += (r.solis_cost_p - r.predbat_cost_p) / 100; xs.push(dayLabel(r.date)); vs.push(cs); vp.push(cp); vb.push(cb); });
+    var cum = [{ name: 'Ours', color: C.ours, values: vs }]; if (useP) cum.push({ name: 'Predbat', color: C.predbat, values: vb }); cum.push({ name: 'Perfect hindsight', color: C.perfect, values: vp });
+    $('cumNote').textContent = useP ? 'Only days Predbat has been replayed on, so all three lines cover the same days.' : '';
+    legend($('cumLegend'), cum);
+    lineChart($('chCum'), { x: xs, series: cum, yMin: Math.min(0, Math.min.apply(null, vs.concat(vp, vb))), yFmt: function (v) { return (v < 0 ? '-' : '') + '£' + Math.abs(v).toFixed(2); }, xTickIdx: xs.length > 1 ? [0, xs.length - 1] : [0], right: 0, empty: 'Appears once there are finished days.', label: 'Running total saved against Solis AI' });
+    var hx = ok.map(function (r) { return dayLabel(r.date); });
+    var hab = [{ name: 'Solis AI', color: C.solis, values: ok.map(function (r) { return r.soc_cheap_end_solis; }) }, { name: 'Ours', color: C.ours, values: ok.map(function (r) { return r.soc_cheap_end_ours; }) }];
+    if (useP) hab.push({ name: 'Predbat', color: C.predbat, values: ok.map(function (r) { var v = r.soc_cheap_end_predbat; return v === undefined ? null : v; }) });
+    hab.push({ name: 'Perfect', color: C.perfect, values: ok.map(function (r) { return r.soc_cheap_end_perfect; }) });
+    legend($('habLegend'), hab);
+    lineChart($('chHab'), { x: hx, series: hab, yMin: 0, yMax: 100, yTicks: [0, 25, 50, 75, 100], yFmt: function (v) { return Math.round(v) + '%'; }, xTickIdx: hx.length > 1 ? [0, hx.length - 1] : [0], right: 0, empty: 'Appears once there are finished days.', label: 'Battery level when the cheap rate ends' });
+  }
+
+  var logBench = 'cap'; try { logBench = localStorage.getItem('logBench') || 'cap'; } catch (e) { logBench = 'cap'; }
+  function renderLog() {
+    var BENCH = [{ key: 'cap', f: 'cap_bill_p', name: 'Ofgem price cap', note: 'the house\'s own use bought at the Ofgem cap (26.32p a unit, 54.83p a day; no VAT until March 2027), no solar or battery' },
+      { key: 'fixed', f: 'fixed_bill_p', name: 'Best fixed rate', note: D.fixedLabel ? 'the house\'s own use at ' + D.fixedLabel : 'not set: add a rate in Setup under "Daily log comparison"' },
+      { key: 'nosolar', f: 'nosolar_bill_p', name: 'Same tariff, no solar or battery', note: 'the house\'s own use bought from the grid at the same tariff that day, with no solar and no battery. Only days our own readings cover' }];
+    var rows = (D.log || []).filter(function (r) { return r.actual_bill_p !== null; }), t = $('tblLog'); clear(t);
+    var off = logBench === 'off', cur = BENCH.filter(function (b) { return b.key === logBench; })[0] || BENCH[0];
+    function counted(r, b) { return (r.status === 'ok' || r.status === 'history') && r.actual_bill_p !== null && r[b.f] !== null && r[b.f] !== undefined; }
+    var sel = $('logBench'); clear(sel);
+    BENCH.forEach(function (b) { var o = el('option', { value: b.key }, b.name); if (!off && b.key === cur.key) o.selected = true; sel.appendChild(o); });
+    var oo = el('option', { value: 'off' }, 'Off (just show what it cost)'); if (off) oo.selected = true; sel.appendChild(oo);
+    sel.onchange = function () { logBench = sel.value; try { localStorage.setItem('logBench', logBench); } catch (e) { /* not remembered */ } renderLog(); };
+    $('cardCum').hidden = off; $('logCompare').hidden = off;
+    var head = el('tr'); (off ? ['Day', 'Solar kWh', 'House used kWh', 'Bought from grid kWh', 'Actual cost'] : ['Day', 'Solar kWh', 'House used kWh', 'Bought from grid kWh', 'Actual cost', 'Comparison', 'Saved']).forEach(function (h, i) { head.appendChild(el('th', i > 0 && i < 4 ? { class: 'wide' } : null, h)); }); t.appendChild(head);
+    if (!rows.length) { var e = el('tr'), c = el('td', null, 'No finished days yet. The first appears the morning after a full day of readings.'); c.setAttribute('colspan', off ? 5 : 7); c.className = 'muted'; e.appendChild(c); t.appendChild(e); }
+    var sa = 0, sc = 0, ss = 0, xs = [], vs = [], good = 0;
+    rows.forEach(function (r) { if (off) { if ((r.status === 'ok' || r.status === 'history')) { good++; sa += r.actual_bill_p; } return; } if (!counted(r, cur)) return; good++; sa += r.actual_bill_p; sc += r[cur.f]; ss += r[cur.f] - r.actual_bill_p; xs.push(dayLabel(r.date)); vs.push(ss / 100); });
+    rows.slice().reverse().forEach(function (r) {
+      var have = r[cur.f] !== null && r[cur.f] !== undefined, sv = have ? r[cur.f] - r.actual_bill_p : null, tr = el('tr', r.status === 'ok' || r.status === 'history' ? {} : { class: 'partial' }), d0 = el('td', null, dayLabel(r.date));
+      if (r.status !== 'ok') d0.appendChild(el('span', { class: 'tag', title: r.notes || '' }, r.status === 'history' ? 'Solis history' : 'partial'));
+      d0.appendChild(el('div', { class: 'kw' }, 'Solar ' + fmt(r.pv_kwh, 1) + ' · House ' + fmt(r.load_kwh, 1) + ' · Grid ' + fmt(r.import_kwh, 1) + ' kWh' + (r.src === 'meter' ? ' (meter)' : '')));
+      tr.appendChild(d0);
+      [fmt(r.pv_kwh, 1), fmt(r.load_kwh, 1), fmt(r.import_kwh, 1)].forEach(function (v) { tr.appendChild(el('td', { class: 'wide' }, v)); });
+      tr.appendChild(el('td', null, gbp(r.actual_bill_p)));
+      if (!off) { tr.appendChild(el('td', null, have ? gbp(r[cur.f]) : '–')); tr.appendChild(el('td', { class: have ? (sv >= 0 ? 'pos' : 'neg') : '' }, have ? gbp(sv, true) : '–')); }
+      t.appendChild(tr);
+    });
+    var tot = $('logTotals'); clear(tot);
+    function stat(label, val, sub) { var c = el('div', { class: 'card' }); c.appendChild(el('div', { class: 'sub' }, label)); c.appendChild(el('div', { style: 'font-size:26px;font-weight:600' }, val)); if (sub) c.appendChild(el('div', { class: 'sub' }, sub)); tot.appendChild(c); }
+    if (off) { stat('Cost so far', good ? gbp(sa) : '–', good + (good === 1 ? ' complete day' : ' complete days')); stat('Average per day', good ? gbp(sa / good) : '–', 'Energy bought plus standing charge'); }
+    else { stat('Saved against: ' + cur.name.toLowerCase(), good ? gbp(ss, true) : '–', good ? good + (good === 1 ? ' complete day' : ' complete days') + (rows.length > good ? ' (partial days and days without this comparison are not counted)' : '') : (cur.key === 'fixed' && !D.fixedLabel ? 'No fixed rate set yet. Add one in Setup, under "Daily log comparison".' : cur.key === 'nosolar' ? 'No days yet. This only fills in for days scored after the latest update.' : 'No complete days yet.'));
+    stat('Average per day', good ? gbp(ss / good, true) : '–', good ? 'Actual ' + gbp(sa / good) + ' a day, comparison ' + gbp(sc / good) + ' a day' : ''); }
+    var cmp = $('logCompare'); clear(cmp); if (off) { $('logNote').textContent = 'Comparison is off. Costs are the energy bought from the grid at Dad\'s Octopus rates plus the standing charge (battery wear is not included). Choose a comparison above to turn it back on.'; return; }
+    BENCH.forEach(function (b) {
+      var n = 0, sv2 = 0; rows.forEach(function (r) { if (counted(r, b)) { n++; sv2 += r[b.f] - r.actual_bill_p; } });
+      var li = el('div', { class: 'cmp' }); li.appendChild(el('b', null, b.name)); li.appendChild(el('span', { class: 'cv' }, n ? gbp(sv2, true) + ' over ' + n + (n === 1 ? ' day' : ' days') + ' (' + gbp(sv2 / n, true) + ' a day)' : 'no days yet')); li.appendChild(el('span', { class: 'cd' }, b.note)); cmp.appendChild(li);
+    });
+    lineChart($('chLogCum'), { x: xs, series: [{ name: 'Saved vs ' + cur.name, color: C.ours, values: vs }], yMin: Math.min(0, Math.min.apply(null, vs.concat([0]))), yFmt: function (v) { return (v < 0 ? '-' : '') + '£' + Math.abs(v).toFixed(2); }, xTickIdx: xs.length > 1 ? [0, xs.length - 1] : [0], right: 0, empty: 'Appears once there are finished days.', label: 'Running total saved against: ' + cur.name });
+    $('logNote').textContent = 'Actual cost is the energy bought at Dad\'s Octopus rates plus the standing charge (battery wear is not included here). Grid kWh come from the Octopus smart meter once it has delivered a day (marked "meter"), otherwise from the inverter. The comparisons use the same standing charge logic: cap and fixed use their own standing charges, "same tariff, no solar" uses the tariff\'s. Days marked "Solis history" were loaded from SolisCloud and are not scored; days with gaps in our own readings are listed but not counted.';
+  }
+
+  function renderQuality() {
+    var Q = D.quality || {}, ul = $('quality'); clear(ul);
+    function li(state, title, detail) { var l = el('li'), ic = el('span', { class: 'ic ' + state }, state === 'good' ? '✓' : state === 'warn' ? '!' : state === 'crit' ? '×' : '–'); ic.setAttribute('aria-hidden', 'true'); l.appendChild(ic); var d = el('div'); d.appendChild(el('b', null, title)); d.appendChild(el('span', { class: 'd' }, detail)); l.appendChild(d); ul.appendChild(l); }
+    li('good', 'Read-only', 'The Solis code can only read. A lock refuses any control request before it is sent.');
+    if (D.live) { var stale = D.live.ageMin > Math.max(30, 3 * Q.readEveryMin); li(stale ? 'crit' : 'good', 'Solis readings', 'Last reading ' + ago(D.live.ageMin) + ', one every ' + Q.readEveryMin + ' min.'); } else li('na', 'Solis readings', 'None yet. Needs the Solis API key.');
+    li(Q.fails >= 3 ? 'crit' : Q.fails > 0 ? 'warn' : 'good', 'Solis requests', Q.fails ? Q.fails + ' failed in a row.' : 'No failures.');
+    if (Q.coverageToday === null || Q.coverageToday === undefined) li('na', 'Today\'s coverage', 'Not enough of today yet.');
+    else li(Q.coverageToday >= .8 && Q.forecastCoverageToday >= .9 ? 'good' : 'warn', 'Today\'s coverage', 'Readings cover ' + Math.round(Q.coverageToday * 100) + '% and saved forecasts ' + Math.round(Q.forecastCoverageToday * 100) + '% of the day so far.');
+    if (Q.solarBiasPct === null || Q.solarBiasPct === undefined) li('na', 'Solar forecast', 'Learning from the first days of data.');
+    else li(Math.abs(Q.solarBiasPct) <= 12 ? 'good' : 'warn', 'Solar forecast', 'Last 7 days: actual solar ran ' + Math.abs(Q.solarBiasPct) + '% ' + (Q.solarBiasPct >= 0 ? 'above' : 'below') + ' the corrected forecast. Learned correction ×' + fmt(Q.pvCal, 2) + '.');
+    var R = Q.reconcile;
+    if (!R || R.avgAbsPct === null || R.avgAbsPct === undefined) li('na', 'Octopus meter check', 'Waiting for Octopus data (it arrives about two days late) or the account details.');
+    else li(R.avgAbsPct <= 3 ? 'good' : 'warn', 'Octopus meter check', 'Solis\'s import figure differs from the meter by ' + R.avgAbsPct + '% on average over ' + R.days + ' days.');
+    if (!D.predbatEnabled) li('na', 'Predbat replay', 'Not switched on. Needs the GitHub token and repo (see the README).');
+    else li(D.predbatDays > 0 ? 'good' : 'warn', 'Predbat replay', D.predbatDays > 0 ? 'Replayed on ' + D.predbatDays + ' finished day' + (D.predbatDays === 1 ? '' : 's') + '. It runs once a day, after midnight.' : 'Switched on, waiting for its first finished day (about a day after the first good day).');
+    var T = Q.rates;
+    if (!T) li('na', 'Tariff rates', 'Not checked yet (runs once a day).'); else li(T.ok === true ? 'good' : T.ok === false ? 'crit' : 'warn', 'Tariff rates', T.text);
+  }
+
+  function renderLearn() {
+    var Q = D.quality || {}; $('learnSub').textContent = 'Solar caution now ' + fmt(Q.hedge, 2) + ' (it plans on that share of the forecast sun). Solar correction ×' + fmt(Q.pvCal, 2) + '. House use is learned by half hour, recent days counting more.';
+    var t = $('tblTune'); clear(t); var h = el('tr'); ['When', 'Setting', 'Was', 'Now', 'Why'].forEach(function (x) { var th = el('th', null, x); h.appendChild(th); }); t.appendChild(h);
+    if (!(D.tuning || []).length) { var e = el('tr'), c = el('td', null, 'Self-tuning runs on Sundays once there are 7 usable days.'); c.setAttribute('colspan', 5); c.className = 'muted'; e.appendChild(c); t.appendChild(e); }
+    (D.tuning || []).forEach(function (r) { var tr = el('tr'); [new Intl.DateTimeFormat('en-GB', { timeZone: TZ, day: 'numeric', month: 'short' }).format(new Date(r.time)), r.what, fmt(r.old, 2), fmt(r.next, 2), r.basis].forEach(function (v, i) { var td = el('td', null, v); if (i === 4) { td.style.whiteSpace = 'normal'; td.style.textAlign = 'left'; } tr.appendChild(td); }); t.appendChild(tr); });
+  }
+
+  function renderForecast() {
+    var F = D.forecast || { days: [] }, t = $('tblFc'); clear(t);
+    var h = el('tr'); ['Day', 'Actual solar', 'Open-Meteo day-ahead', 'Solcast day-ahead', 'Open-Meteo typical miss', 'Solcast typical miss'].forEach(function (x) { h.appendChild(el('th', null, x)); }); t.appendChild(h);
+    if (!F.enabled) { $('fcVerdict').textContent = 'Solcast is not switched on. Add the Solcast key and site IDs (see the README).'; }
+    else if (!F.days.length) { $('fcVerdict').textContent = 'Waiting for the first finished day with both forecasts.'; }
+    else {
+      var n = F.days.length, sc = F.days.filter(function (r) { return r.sc_dayahead_mae_kw < r.om_dayahead_mae_kw; }).length;
+      $('fcVerdict').textContent = n < 7 ? 'Too early to say: ' + n + ' day' + (n === 1 ? '' : 's') + ' so far (needs 7). Solcast was closer on ' + sc + ' of them.' :
+        'Day-ahead, Solcast was closer on ' + sc + ' of the last ' + n + ' days and Open-Meteo on ' + (n - sc) + '. "Typical miss" is the average gap in kW over the daylight half hours, so lower is better.';
+    }
+    F.days.slice().reverse().forEach(function (r) {
+      var tr = el('tr'), omBetter = r.om_dayahead_mae_kw < r.sc_dayahead_mae_kw;
+      [dayLabel(r.date), fmt(r.actual_kwh, 1) + ' kWh', fmt(r.om_dayahead_kwh, 1) + ' kWh', fmt(r.sc_dayahead_kwh, 1) + ' kWh', fmt(r.om_dayahead_mae_kw, 2) + ' kW', fmt(r.sc_dayahead_mae_kw, 2) + ' kW'].forEach(function (v, i) {
+        var td = el('td', null, v); if ((i === 4 && omBetter) || (i === 5 && !omBetter)) td.style.fontWeight = 650; tr.appendChild(td); });
+      t.appendChild(tr);
+    });
+  }
+  // ---------------------------------------------------------------- setup tab
+  var S = null, openGroups = {};
+  function gs(fn, args, ok, bad) {
+    if (window.google && google.script && google.script.run) { var r = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { bad(e && e.message ? e.message : String(e)); }); r[fn].apply(r, args); }
+    else if (window.__API__ && window.__API__.url) {
+      // static phone site: same calls over HTTPS (text/plain keeps it a simple request, so no CORS preflight)
+      var done = false, to = setTimeout(function () { if (!done) { done = true; bad('Timed out. Check your connection and pull down to refresh.'); } }, 90000);
+      fetch(window.__API__.url, { method: 'POST', redirect: 'follow', body: JSON.stringify({ fn: fn, args: args, o: window.__API__.owner || '' }) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (done) return; done = true; clearTimeout(to); if (j && j.ok) ok(j.r); else bad((j && j.e) || 'The server said no'); })
+        .catch(function (e) { if (done) return; done = true; clearTimeout(to); bad('Could not reach the server (' + (e && e.message ? e.message : e) + ')'); });
+    }
+    else if (window.__SETUP__ && window.__SETUP__[fn]) ok(window.__SETUP__[fn].apply(null, args)); else bad('not available here');
+  }
+  function renderSetup(st) {
+    S = st; var list = $('setupStatus'); clear(list);
+    function li(state, title, detail) { var l = el('li'), ic = el('span', { class: 'ic ' + state }, state === 'good' ? '✓' : state === 'warn' ? '!' : state === 'crit' ? '×' : '–'); ic.setAttribute('aria-hidden', 'true'); l.appendChild(ic); var d = el('div'); d.appendChild(el('b', null, title)); d.appendChild(el('span', { class: 'd' }, detail)); l.appendChild(d); list.appendChild(l); }
+    var set = {}; st.items.forEach(function (i) { set[i.name] = i.isSet; });
+    li(set.SOLIS_KEY_ID && set.SOLIS_KEY_SECRET ? 'good' : 'crit', 'Solis keys', set.SOLIS_KEY_ID && set.SOLIS_KEY_SECRET ? 'Saved.' : 'Not saved yet. Needs the API approval from Solis first.');
+    li(set.SOLIS_INVERTER_SN ? 'good' : 'warn', 'Inverter serial', set.SOLIS_INVERTER_SN ? 'Saved.' : 'Run Test Solis below; it will find it.');
+    li(st.triggers >= st.triggersExpected ? 'good' : 'warn', 'Schedule', st.triggers >= st.triggersExpected ? 'Running (' + st.triggers + ' timers).' : 'Not started (' + st.triggers + ' of ' + st.triggersExpected + ' timers). Press "Start the schedule" once the readings test works.');
+    var age = st.lastReadingMs ? (Date.now() - st.lastReadingMs) / 60000 : null;
+    li(age === null ? 'na' : age < 30 ? 'good' : 'crit', 'Latest reading', age === null ? 'None yet.' : ago(age) + '.');
+    li(set.SOLCAST_API_KEY && set.SOLCAST_SITE_IDS ? 'good' : 'na', 'Solcast', set.SOLCAST_API_KEY && set.SOLCAST_SITE_IDS ? 'Set up.' : 'Optional. Not set up.');
+    li(set.GITHUB_TOKEN && set.GITHUB_REPO ? 'good' : 'na', 'Predbat replay', set.GITHUB_TOKEN && set.GITHUB_REPO ? 'Set up.' : 'Optional. Not set up.');
+    li(set.OCTOPUS_API_KEY && set.OCTOPUS_MPAN && set.OCTOPUS_METER_SERIAL ? 'good' : 'na', 'Octopus meter check', set.OCTOPUS_API_KEY && set.OCTOPUS_MPAN && set.OCTOPUS_METER_SERIAL ? 'Set up.' : 'Optional. Not set up.');
+    (st.recent || []).forEach(function (r) { li(r.recovered ? 'warn' : (r.level === 'ERROR' ? 'crit' : 'warn'), 'Recent ' + r.level.toLowerCase() + (r.recovered ? ' (a reading has worked since)' : ''), hhmm(r.time) + ' ' + r.msg); });
+    // actions
+    var ac = $('actions'); clear(ac);
+    var byName = {}; st.actions.forEach(function (a) { byName[a.name] = a; });
+    var GROUPS = [
+      { t: 'Everyday', n: ['testSolis', 'tick', 'installTriggers'] },
+      { t: 'Past days', n: ['solisHistoryLoad', 'octopusDaysLoad'], need: null },
+      { t: 'Forecasts and prices', n: ['solcastFetch', 'checkRates', 'scoreToday'] },
+      { t: 'Predbat replay', n: ['pushPredbatInputs', 'pullPredbat'], need: 'GITHUB_TOKEN' },
+      { t: 'Summerhouse heater', n: ['tuyaLoginStart', 'tuyaLoginFinish', 'tuyaListDevices', 'summerhouseTest', 'summerhouseCapabilities', 'summerhouseRefresh'], need: 'TUYA_USER_CODE' }];
+    var shown = {};
+    GROUPS.forEach(function (gr) {
+      if (gr.need && !set[gr.need]) return;
+      var acts = gr.n.map(function (n) { return byName[n]; }).filter(Boolean); if (!acts.length) return;
+      var row = el('div', { class: 'agrp' }), bs = el('div', { class: 'bs' });
+      row.appendChild(el('div', { class: 't' }, gr.t)); row.appendChild(bs);
+      acts.forEach(function (a) { shown[a.name] = 1; var btn = el('button', { class: 'btn sm', type: 'button', title: a.help }, a.label); btn.addEventListener('click', function () { runAct(a, btn); }); bs.appendChild(btn); });
+      var dt = el('details'); dt.appendChild(el('summary', null, 'What these do')); var ul = el('ul'); acts.forEach(function (a) { var li2 = el('li'); li2.appendChild(el('b', null, a.label + ': ')); li2.appendChild(document.createTextNode(a.help)); ul.appendChild(li2); }); dt.appendChild(ul); row.appendChild(dt);
+      ac.appendChild(row);
+    });
+    var hidden = {}; GROUPS.forEach(function (gr) { if (gr.need && !set[gr.need]) hidden[gr.t] = 1; });
+    if (hidden['Predbat replay'] || hidden['Summerhouse heater']) ac.appendChild(el('div', { class: 'sub', style: 'padding:8px 0' }, 'More tools appear here once ' + [hidden['Predbat replay'] ? 'the Predbat replay (GitHub token and repository)' : '', hidden['Summerhouse heater'] ? 'the summerhouse heater (Smart Life User Code)' : ''].filter(Boolean).join(' and ') + ' ' + (hidden['Predbat replay'] && hidden['Summerhouse heater'] ? 'are' : 'is') + ' set up.'));
+    // settings
+    var g = $('setupGroups'); clear(g); var groups = {}, order = [];
+    st.items.forEach(function (i) { if (!groups[i.group]) { groups[i.group] = []; order.push(i.group); } groups[i.group].push(i); });
+    order.forEach(function (name, gi) {
+      var items = groups[name], nSet = items.filter(function (i) { return i.toggle ? i.value === 'true' : i.isSet; }).length;
+      var det = el('details', { class: 'setgrp' }), sm = el('summary'), body = el('div', { class: 'body' });
+      sm.appendChild(document.createTextNode(name.replace(/ \(.*\)$/, ''))); var chip = el('span', { class: 'chip' + (nSet === items.length ? ' on' : '') }, nSet + ' of ' + items.length + ' set'); sm.appendChild(chip);
+      if (/^Solis/.test(name) && nSet < items.length) det.open = true;
+      if (openGroups[name]) det.open = true;
+      det.addEventListener('toggle', function () { openGroups[name] = det.open; });
+      det.appendChild(sm); det.appendChild(body); items.forEach(function (i) { body.appendChild(fieldRow(i)); }); g.appendChild(det);
+    });
+    var c = $('cfgList'); clear(c);
+    [['Tariff', st.config.tariff], ['Battery', st.config.capKwh + ' kWh usable, charge up to ' + st.config.maxChargeKw + ' kW'], ['Export limit (DNO)', st.config.exportLimitKw + ' kW. Confirm against the real DNO figure.'], ['Location', st.config.lat + ', ' + st.config.lon]].concat(st.config.arrays.map(function (a) { return ['Roof', a + ' (confirm with the installer)']; }))
+      .forEach(function (r) { var l = el('li'); l.appendChild(el('span', { class: 'ic na', 'aria-hidden': 'true' }, '–')); var d = el('div'); d.appendChild(el('b', null, r[0])); d.appendChild(el('span', { class: 'd' }, r[1])); l.appendChild(d); c.appendChild(l); });
+  }
+  function fieldRow(i) {
+    var row = el('div', { class: 'field' }), nm = el('div', { class: 'nm' }), b = el('b', null, i.label), msg = el('div', { class: 'msg', role: 'status' });
+    b.appendChild(el('span', { class: 'chip' + ((i.toggle ? i.value === 'true' : i.isSet) ? ' on' : '') }, i.toggle ? (i.value === 'true' ? 'On' : 'Off') : (i.isSet ? (i.secret ? 'Saved' : 'Set') : 'Not set')));
+    nm.appendChild(b); nm.appendChild(el('small', null, i.help || ''));
+    var inp;
+    if (i.toggle) { inp = el('select'); [['false', 'Off'], ['true', 'On']].forEach(function (o) { var op = el('option', { value: o[0] }, o[1]); if (i.value === o[0]) op.selected = true; inp.appendChild(op); }); }
+    else { inp = el('input', { type: i.secret ? 'password' : 'text', autocomplete: 'off', spellcheck: 'false', placeholder: i.secret ? (i.isSet ? 'Saved. Paste a new one to replace' : 'Paste here') : '' }); if (!i.secret) inp.value = i.value || ''; }
+    inp.setAttribute('aria-label', i.label);
+    var btns = el('div', { class: 'btns' }), save = el('button', { class: 'btn primary', type: 'button' }, 'Save'), clr = el('button', { class: 'btn', type: 'button' }, 'Clear');
+    function done(st) { renderSetup(st); }
+    save.addEventListener('click', function () {
+      if (!i.toggle && !inp.value.trim()) { msg.className = 'msg err'; msg.textContent = 'Nothing to save.'; return; }
+      save.disabled = true; msg.className = 'msg'; msg.textContent = 'Saving…';
+      gs('saveSetting', [i.name, inp.value], function (st) { done(st); }, function (e) { save.disabled = false; msg.className = 'msg err'; msg.textContent = e; });
+    });
+    clr.addEventListener('click', function () { gs('saveSetting', [i.name, ''], done, function (e) { msg.className = 'msg err'; msg.textContent = e; }); });
+    btns.appendChild(save); if (i.isSet && !i.toggle) btns.appendChild(clr);
+    row.appendChild(nm); row.appendChild(inp); row.appendChild(btns); row.appendChild(msg); return row;
+  }
+  function runAct(a, btn) {
+    var out = $('actOut'); clear(out); btn.disabled = true; var old = btn.textContent; btn.textContent = 'Running…';
+    function fin() { btn.disabled = false; btn.textContent = old; }
+    gs('runSetupAction', [a.name], function (r) {
+      fin(); var box = el('div', { class: 'card', style: 'margin-top:10px' }); box.appendChild(el('b', null, a.label + (r.ok ? ': done' : ': did not work')));
+      if (!r.ok) { box.appendChild(el('pre', { class: 'out' }, r.message)); out.appendChild(box); return; }
+      if (a.name === 'testSolis' && r.result) {
+        var t = r.result; box.appendChild(el('div', { class: 'sub' }, t.inverters.length + ' inverter' + (t.inverters.length === 1 ? '' : 's') + ' found.'));
+        t.inverters.forEach(function (v) { var line = el('div', { class: 'sub' }, v.sn + (v.station ? ' (' + v.station + ')' : '') + ' '), u = el('button', { class: 'btn', type: 'button' }, 'Use this serial');
+          u.addEventListener('click', function () { gs('saveSetting', ['SOLIS_INVERTER_SN', v.sn], function (st) { renderSetup(st); u.textContent = 'Saved'; }, function (e) { u.textContent = e; }); }); line.appendChild(u); box.appendChild(line); });
+        if (t.mapped) {
+          box.appendChild(el('div', { class: 'sub', style: 'margin-top:8px' }, 'One reading, as we understand it. Check each against the SolisCloud app at the same moment.'));
+          var tb = el('table'); Object.keys(t.mapped).forEach(function (k) { var tr = el('tr'); tr.appendChild(el('td', null, k)); tr.appendChild(el('td', null, t.mapped[k] === null || t.mapped[k] === undefined ? '(blank)' : String(t.mapped[k]))); tb.appendChild(tr); }); box.appendChild(tb);
+          if (t.missing.length) box.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, 'Blank, so the field name needs adding: ' + t.missing.join(', ')));
+          var det = el('details'); det.appendChild(el('summary', null, 'Technical detail (send this to me if values are blank; remove the serial first)')); det.appendChild(el('pre', { class: 'out' }, t.technical)); box.appendChild(det);
+        }
+      } else if (a.name === 'tuyaLoginStart' && typeof r.result === 'string' && /tuyaSmart--qrLogin\?token=/.test(r.result)) {
+        var parts = r.result.split('\n'), qrText = parts[parts.length - 1]; box.appendChild(el('div', { class: 'sub' }, parts.slice(0, -1).join(' ')));
+        var qd = el('div', { style: 'background:#fff;padding:12px;display:inline-block;margin-top:8px;border-radius:8px' }); box.appendChild(qd);
+        function drawQr() { try { new QRCode(qd, { text: qrText, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M }); } catch (e) { qd.remove(); box.appendChild(el('pre', { class: 'out' }, 'Could not draw the QR code here. Make a QR code from this exact text with any QR generator and scan it in the Smart Life app:\n' + qrText)); } }
+        if (window.QRCode) drawQr(); else { var sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'; sc.onload = drawQr; sc.onerror = function () { qd.remove(); box.appendChild(el('pre', { class: 'out' }, 'The QR code library would not load. Make a QR code from this exact text with any QR generator and scan it in the Smart Life app:\n' + qrText)); }; document.head.appendChild(sc); }
+      } else box.appendChild(el('pre', { class: 'out' }, typeof r.result === 'string' ? r.result : JSON.stringify(r.result)));
+      out.appendChild(box); gs('getSetup', [], renderSetup, function () {});
+    }, function (e) { fin(); var box = el('div', { class: 'card', style: 'margin-top:10px' }); box.appendChild(el('pre', { class: 'out' }, e)); out.appendChild(box); });
+  }
+  function linkBox(text, url) { var o = $('linkOut'); clear(o); if (!url) { o.textContent = text; return; } o.appendChild(document.createTextNode(text)); var i = el('input', { type: 'text', readonly: 'readonly', 'aria-label': 'View-only link' }); i.value = url; i.style.cssText = 'width:100%;margin-top:6px;font:inherit;font-size:13px;padding:7px 10px;border-radius:8px;border:1px solid var(--axis);background:var(--page);color:var(--ink)'; i.addEventListener('focus', function () { i.select(); }); o.appendChild(i); }
+  $('linkMake').addEventListener('click', function () { gs('createViewLink', [], function (r) { linkBox('Link created. Select it and copy it:', r.url); }, function (e) { linkBox('Could not create it: ' + e); }); });
+  $('linkDrop').addEventListener('click', function () { gs('removeViewLink', [], function () { linkBox('Link removed. Nobody else can open the app now.'); }, function (e) { linkBox('Could not remove it: ' + e); }); });
+  var curTab = 'dash', actTimer = null, VIEWS = { dash: ['viewDash', 'tabDash'], log: ['viewLog', 'tabLog'], act: ['viewAct', 'tabAct'], br: ['viewBr', 'tabBr'], tf: ['viewTf', 'tabTf'], car: ['viewCar', 'tabCar'], sh: ['viewSh', 'tabSh'], setup: ['viewSetup', 'tabSetup'] };
+  function showTab(which) {
+    curTab = which; var mainT = { dash: 1, log: 1, tf: 1, car: 1 }; Array.prototype.forEach.call(document.querySelectorAll('#botbar button'), function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-t') === (mainT[which] ? which : 'more'))); }); $('moreSheet').hidden = true;
+    Object.keys(VIEWS).forEach(function (k) { $(VIEWS[k][0]).hidden = k !== which; $(VIEWS[k][1]).setAttribute('aria-selected', String(k === which)); });
+    if (actTimer) { clearInterval(actTimer); actTimer = null; }
+    if (which === 'setup') gs('getSetup', [], renderSetup, function (e) { $('setupStatus').textContent = 'Could not load setup: ' + e; });
+    else if (which === 'act') { loadActivity(); actTimer = setInterval(loadActivity, 60000); }
+    else if (which === 'br') { loadBr(); actTimer = setInterval(loadBr, 120000); }
+    else if (which === 'tf') loadTf();
+    else if (which === 'car') loadCar();
+    else if (which === 'sh') { loadSh(); actTimer = setInterval(loadSh, 120000); }
+    else if (D) { if (which === 'log') renderLog(); else { renderToday(); renderDayCharts(); renderPlan(); renderHistory(); } }
+  }
+  function loadActivity() { gs('getActivity', [(window.__ACCESS__ || {}).key || ''], renderActivity, function (e) { $('actStatus').textContent = 'Could not load activity: ' + e; }); }
+  var TF = null;
+  function loadTf() { gs('getTariffs', [(window.__ACCESS__ || {}).key || ''], function (r) { TF = r; renderTf(); }, function (e) { $('tfMsg').textContent = 'Could not load: ' + e; }); }
+  $('tfOnlyOk').addEventListener('change', function () { renderTf(); });
+  $('tfScan').addEventListener('click', function () {
+    var b = $('tfScan'); b.disabled = true; $('tfMsg').textContent = 'Scanning prices. This takes up to a minute…';
+    gs('tariffScan', [], function (r) { b.disabled = false; $('tfMsg').textContent = ''; TF = { scan: r, owner: true, postcode: TF ? TF.postcode : '' }; renderTf(); }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan failed: ' + e; });
+  });
+  function pounds(p, sign) { var v = Math.abs(p) / 100; return (sign ? (p > 0 ? '+' : p < 0 ? '-' : '') : (p < 0 ? '-' : '')) + '£' + v.toFixed(2); }
+  var TFMODE = 'own';
+  function renderTf() {
+    var out = $('tfOut'); clear(out); if (!TF) return;
+    $('tfScan').hidden = !TF.owner;
+    var S = TF.scan;
+    if (!S) { out.appendChild(el('div', { class: 'empty' }, TF.owner ? 'No scan yet. Press "Scan deals now".' : 'No scan yet. The owner needs to run one.')); return; }
+    if (!(S.v >= 3)) { out.appendChild(el('div', { class: 'card', style: 'margin-top:10px;border-color:var(--ours)' }, 'This scan was made before the 12, 18 and 24 month comparison, the export pairing and the filter for deals we cannot get. ' + (TF.owner ? 'Press "Scan deals now" to get the full picture.' : 'The owner needs to scan again.'))); return; }
+    var only = $('tfOnlyOk').checked, hz = S.horizons, cur = S.current, mdl = S.model, age = Math.round((Date.now() - S.made) / 3600e3);
+    var all = S.tariffs.filter(function (t) { return !(only && t.blocked); }), left = S.tariffs.filter(function (t) { return t.blocked; });
+    var fixedOf = function (t) { return t.term > 0 && !/tracker|agile|half-hourly/i.test(t.kind); };
+    var hOf = function (t) { if (TFMODE === 'own') { if (fixedOf(t)) { var h = Math.min(36, Math.round(t.term)); return hz.indexOf(h) >= 0 ? h : 12; } return 12; } return +TFMODE; };
+    var diffOf = function (t) { var h = hOf(t); return t.proj[h][2] - S.curProj[h][2]; };
+    var rows = all.slice().sort(function (a, b) { return diffOf(a) / hOf(a) - diffOf(b) / hOf(b); });
+    var lvlAt = function (h) { return mdl.path[Math.min(h, mdl.path.length) - 1] || 1; };
+    var stepI = -1; mdl.path.forEach(function (v, i) { if (stepI < 0 && v > 1.001) stepI = i; });
+    var stepM = stepI >= 0 ? mdl.months[stepI][0] : '';
+    var monthName = function (ym) { var p = ym.split('-'); return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+p[1] - 1] + ' ' + p[0]; };
+    var rateTxt = function (t) { return t.lowP === t.highP ? fmt(t.lowP, 1) + 'p' : fmt(t.lowP, 1) + 'p to ' + fmt(t.highP, 1) + 'p'; };
+    var expTxt = function (t, h) { if (fixedOf(t) && h <= t.term) return 'fixed, no change'; var l = lvlAt(h); return (t.lowP === t.highP ? fmt(t.lowP * l, 1) + 'p' : fmt(t.lowP * l, 1) + 'p to ' + fmt(t.highP * l, 1) + 'p') + (fixedOf(t) ? ' after the fixed term' : ''); };
+    var exName = function (t, h) { var i = t.proj[h][5]; return i >= 0 ? S.exNames[i] : ''; };
+
+    // comparison basis
+    var bar = el('div', { class: 'daybar', style: 'margin-top:10px;flex-wrap:wrap' }); bar.appendChild(el('span', { class: 'sub' }, 'Compare over:'));
+    [['own', 'Each deal\'s own term']].concat(hz.map(function (h) { return [String(h), h + ' months']; })).forEach(function (o) {
+      var b = el('button', { class: 'btn sm' + (TFMODE === o[0] ? ' primary' : ''), type: 'button' }, o[1]); b.addEventListener('click', function () { TFMODE = o[0]; renderTf(); }); bar.appendChild(b);
+    });
+    out.appendChild(bar);
+    out.appendChild(el('div', { class: 'sub', style: 'margin:4px 0 0' }, TFMODE === 'own' ? 'A 12 month fix is judged over 12 months, an 18 month fix over 18, and variable deals over 12, each against what the current deal would cost over the same months.' : 'Every deal is judged over the same ' + TFMODE + ' months. A fix shorter than that goes back to the variable price afterwards.'));
+
+    // best tariff box
+    var bf = null, bv = null; rows.forEach(function (t) { if (!bf && fixedOf(t)) bf = t; if (!bv && !fixedOf(t)) bv = t; });
+    var picks = [['Best overall', rows[0]], ['Best fixed price', bf], ['Best variable price', bv]].filter(function (x, i, a) { return x[1] && !(i > 0 && x[1] === a[0][1]); });
+    var grid = el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:10px' });
+    picks.forEach(function (pk) {
+      var t = pk[1], h = hOf(t), p = t.proj[h], d = diffOf(t), c = el('div', { class: 'card' });
+      c.appendChild(el('div', { class: 'sub' }, pk[0] + ' (' + h + ' months)'));
+      c.appendChild(el('div', { style: 'font-size:16px;font-weight:650;margin:2px 0' }, t.name));
+      if (exName(t, h)) c.appendChild(el('div', { class: 'sub' }, 'with ' + exName(t, h) + ' for export'));
+      c.appendChild(el('div', { class: 'num ' + (d < 0 ? 'pos' : ''), style: 'font-size:22px;font-weight:650;margin-top:6px' }, d < 0 ? pounds(-d / h) + ' a month better off' : 'No better than now'));
+      c.appendChild(el('div', { class: 'sub' }, d < 0 ? 'About ' + pounds(-d) + ' over ' + h + ' months against ' + cur.name + '.' : 'Costs ' + pounds(d) + ' more over ' + h + ' months than ' + cur.name + '.'));
+      var ls = el('div', { class: 'sub', style: 'margin-top:8px;line-height:1.5' });
+      ls.appendChild(el('div', null, fixedOf(t) ? 'Fixed price: ' + rateTxt(t) + ' per kWh for ' + t.term + ' months, standing charge ' + fmt(t.standingP, 1) + 'p a day.' : 'Price today: ' + rateTxt(t) + ' per kWh, standing charge ' + fmt(t.standingP, 1) + 'p a day.'));
+      if (!(fixedOf(t) && h <= t.term)) ls.appendChild(el('div', null, 'Expected over the period: ' + expTxt(t, h) + (stepM ? ' (price cap outlook: about ' + Math.round((lvlAt(h) - 1) * 100) + '% higher from ' + monthName(stepM) + ')' : '') + '.'));
+      ls.appendChild(el('div', null, 'Import ' + pounds(p[0]) + ' less export ' + pounds(p[1]) + ' = ' + pounds(p[2]) + ' net over ' + h + ' months' + (p[4] - p[3] > 50 ? ', range ' + pounds(p[3]) + ' to ' + pounds(p[4]) : '') + '.'));
+      if (t.ev) ls.appendChild(el('div', { style: 'margin-top:4px' }, 'Electric-car deal: usually needs the car or charger registered with that supplier. Check it works with Intelligent Go and the Zappi before relying on it.'));
+      if (/battery/i.test(exName(t, h) || '')) ls.appendChild(el('div', { style: 'margin-top:4px' }, 'The export deal may need a particular battery or installer. Check its eligibility.'));
+      c.appendChild(ls); grid.appendChild(c);
+    });
+    out.appendChild(grid);
+    var cc = el('div', { class: 'sub', style: 'margin-top:6px' }, 'Based on ' + dayLabel(S.from) + ' to ' + dayLabel(S.to) + ' of real purchases (' + S.days + ' full days) projected forward with a seasonal model, ' + S.region + '. Scanned ' + (age < 1 ? 'less than an hour' : age < 48 ? age + ' hours' : Math.round(age / 24) + ' days') + ' ago. Current deal: ' + cur.name + '.');
+    out.appendChild(cc);
+    if (S.sources && S.sources.length) {
+      var ds = S.sources.map(function (d) { return d.label + ': ' + (d.priced ? d.priced + ' deals priced' + (d.older ? ' (' + d.older + ' older versions ignored)' : '') : d.error ? 'not available (' + d.error + ')' : 'no deals priced') + (d.priced === 0 && d.label !== 'Octopus' && S.trackerRows ? ', using Tariff Tracker figures instead' : ''); });
+      out.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Sources: ' + ds.join(' · ') + '.'));
+    }
+
+    // saving per month, every deal on its own basis
+    var top = rows.slice(0, 12), items = top.map(function (t) { var h = hOf(t); return { name: t.name, sub: t.kind + ' · over ' + h + ' months', v: -diffOf(t) / h, c: t.manual ? 'var(--predbat)' : t.other ? 'var(--perfect)' : 'var(--solis)' }; });
+    var mx = Math.max.apply(null, items.map(function (i) { return Math.abs(i.v); }).concat([1]));
+    var c2 = el('div', { class: 'card', style: 'margin-top:10px' }); c2.appendChild(el('h2', { style: 'font-size:14px' }, 'Better or worse off per month than ' + cur.name));
+    var bars = el('div', { class: 'bars' });
+    items.forEach(function (it) {
+      var row = el('div', { class: 'row' }), nm = el('div', { class: 'name' }, it.name); nm.appendChild(el('small', null, it.sub));
+      var tr = el('div', { class: 'track' }), w = Math.abs(it.v) / mx * 40, b = el('div', { class: 'bar' }); b.style.width = Math.max(.5, w) + '%'; b.style.background = it.v < 0 ? 'var(--ours)' : it.c;
+      var val = el('div', { class: 'val' }, (it.v < 0 ? pounds(-it.v) + ' a month dearer' : pounds(it.v) + ' a month cheaper')); val.style.left = 'calc(' + w + '% + 2px)';
+      tr.appendChild(b); tr.appendChild(val); row.appendChild(nm); row.appendChild(tr); bars.appendChild(row);
+    });
+    c2.appendChild(bars); out.appendChild(c2);
+
+    // table
+    var tc = el('div', { class: 'card', style: 'margin-top:10px' }), sc = el('div', { class: 'scroll' }); tc.appendChild(el('h2', { style: 'font-size:14px' }, 'All ' + rows.length + ' deals, best first')); tc.appendChild(sc);
+    table(sc, ['Import deal', 'Export deal paired', 'Over', 'Import cost', 'Export earns', 'Net cost', 'Range', 'Against current', 'Rate now', 'Expected rate', 'Standing (p/day)', 'Contract'], rows.map(function (t) {
+      var h = hOf(t), p = t.proj[h], d = diffOf(t);
+      return [t.name, exName(t, h) || 'None paired', h + ' months', pounds(p[0]), pounds(p[1]), pounds(p[2]), p[4] - p[3] > 50 ? pounds(p[3]) + ' to ' + pounds(p[4]) : 'fixed', pounds(d, true), rateTxt(t), expTxt(t, h), fmt(t.standingP, 1), t.term ? t.term + ' months' + (t.exitFeeP ? ', exit fee ' + pounds(t.exitFeeP) : '') : 'No fixed term'];
+    }));
+    out.appendChild(tc);
+
+    if (S.exports && S.exports.length) {
+      var ec = el('div', { class: 'card', style: 'margin-top:10px' }), es = el('div', { class: 'scroll' }), ex = S.exports.filter(function (e) { return !(only && e.blocked); });
+      ec.appendChild(el('h2', { style: 'font-size:14px' }, 'Export deals (selling solar back)'));
+      ec.appendChild(el('div', { class: 'sub' }, 'Export is capped at ' + (mdl.cap ? mdl.cap + ' kWh a day (UKPN limit)' : 'the inverter limit') + '. ' + (S.exportMode === 'estimated' ? 'It is not approved yet, so expected export is modelled from solar left over after the house.' : 'Recent earnings use real exports.'))); ec.appendChild(es);
+      table(es, ['Export deal', 'Supplier', 'Rate (p/kWh)', 'Contract', 'You also need'], ex.map(function (e) {
+        return [e.name, e.supplier || '', e.lowP === e.highP ? fmt(e.lowP, 1) : fmt(e.lowP, 1) + ' to ' + fmt(e.highP, 1), e.term ? e.term + ' months' : 'No fixed term', e.sid === 'any' ? 'Any import deal' : e.flux ? 'Their Flux import' : 'Their import deal (' + (e.supplier || e.sid) + ')'];
+      }));
+      out.appendChild(ec);
+    }
+
+    // how reliable
+    var rd = el('details', { class: 'setgrp', style: 'margin-top:10px' }), rs = el('summary', null, 'How reliable is this? ' + mdl.daysObserved + ' days recorded, ' + mdl.monthsReal + ' of 12 months with real data'), rb = el('div', { class: 'body' }); rd.appendChild(rs); rd.appendChild(rb);
+    rb.appendChild(el('div', { class: 'sub', style: 'margin:6px 0' }, 'Every complete day is saved once. Each future month blends what this house really did in that calendar month with a UK seasonal shape scaled to this house. The more days recorded in a month, the more that month is real data. With few days the winter months are decent and summer is mostly the seasonal shape, so treat the long horizons as estimates that sharpen over time. Model against reality: real grid imports were ' + fmt(mdl.calib * 100, 0) + '% of the simple solar-minus-house balance, and that correction is applied.' + (mdl.extra ? ' Includes ' + fmt(mdl.extra, 1) + ' kWh a day extra for the car.' : '')));
+    var mrows = mdl.months.map(function (m, i) { return [monthName(m[0]), fmt(m[3], 1), fmt(m[4], 1), fmt(m[1], 1), fmt(m[2], 1), m[5] ? m[5] + ' days' : '-', m[5] >= 15 ? 'Real data' : m[5] > 0 ? 'Mixed' : 'Modelled', Math.round((mdl.path[i] - 1) * 100) + '%']; });
+    var ms = el('div', { class: 'scroll' }); rb.appendChild(ms); table(ms, ['Month', 'Solar a day (kWh)', 'House use a day', 'Grid import a day', 'Export a day', 'Days recorded', 'Basis', 'Price level vs today'], mrows);
+    out.appendChild(rd);
+
+    if (only && left.length) {
+      var lc = el('details', { class: 'setgrp', style: 'margin-top:10px' }), ls = el('summary', null, left.length + (left.length === 1 ? ' deal' : ' deals') + ' left out because we cannot get them'), lb = el('div', { class: 'body' }); lc.appendChild(ls); lc.appendChild(lb);
+      left.forEach(function (t) { var p = el('div', { class: 'sub', style: 'margin:6px 0' }); p.appendChild(el('b', null, t.name + ': ')); p.appendChild(document.createTextNode(t.blocked)); lb.appendChild(p); });
+      lb.appendChild(el('div', { class: 'sub', style: 'margin:8px 0' }, 'Based on what the house has: smart meter, solar and battery, no heat pump or storage heaters. The electric car counts because the Tesla charges here from 28 November. Untick the box above to see them anyway.'));
+      out.appendChild(lc);
+    }
+    var nt = el('div', { class: 'card', style: 'margin-top:10px' }); nt.appendChild(el('h2', { style: 'font-size:14px' }, 'How to read this'));
+    ['Each deal is priced on the half-hour pattern of what the house really buys from the grid, projected over the months ahead, plus its standing charge, minus what its paired export deal would pay. Octopus export needs Octopus import, EDF with EDF, E.ON Next with E.ON Next. Flux import and export only come as a pair.',
+     'Fixed deals stay flat for their term and then follow the variable price. Variable, tracker and half-hourly deals follow the "PriceOutlook" sheet: the price level against today\'s rates by month. It starts from published bill-level forecasts (Cornwall Insight, Nov 2026: about 26% up in January) because an electricity-only forecast is not published, so edit that sheet when Ofgem confirms a cap. The range widens about 1% a month ahead.',
+     'The time of day pattern is held at what recent days showed, and the battery is run for the current deal, so cheap-night, Agile and tracker deals are probably a little pessimistic. If the car is not yet in the recorded days, set extraKwhPerDay in Config.gs under projection.',
+     'Deals from suppliers that do not publish prices (British Gas, Scottish Power and others) can be typed into the "OtherTariffs" sheet, and their export rates into "OtherExports" (name, p/kWh, needs: octopus, edf, eonnext or any). Check the supplier\'s page before switching: there may be eligibility rules or exit fees.'].forEach(function (s) { nt.appendChild(el('p', { class: 'sub', style: 'margin:6px 0' }, s)); });
+    out.appendChild(nt);
+  }
+  var CAR = null;
+  function loadCar() { gs('getCars', [(window.__ACCESS__ || {}).key || ''], function (r) { CAR = r; renderCar(); }, function (e) { var m = $('carMsg'); m.hidden = false; m.textContent = 'Could not load: ' + e; }); }
+  function renderCar() {
+    var out = $('carOut'); clear(out); $('carMsg').hidden = true; var C2 = CAR; if (!C2) return;
+    if (!C2.enabled) { out.appendChild(el('div', { class: 'card', style: 'margin-top:10px' }, 'The car advisor is switched off. Turn it on in Setup under "Electric cars" (CAR_ADVISOR).')); return; }
+    var grid = el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:10px' });
+    C2.cars.forEach(function (c) {
+      var d = el('div', { class: 'card' });
+      d.appendChild(el('div', { class: 'sub' }, c.owner + '\'s car' + (c.started ? '' : ' (starts ' + dayLabel(c.from) + ')')));
+      d.appendChild(el('div', { style: 'font-size:16px;font-weight:650' }, c.model));
+      d.appendChild(el('div', { class: 'num', style: 'font-size:26px;font-weight:650;margin-top:6px' }, c.socNow + '%  ·  about ' + c.rangeMiles + ' miles'));
+      d.appendChild(el('div', { class: 'sub' }, c.socKnown ? 'Estimated now from the last reading' + (c.asOf ? ' (' + dayLabel(localDateOf(c.asOf)) + ' ' + hhmm(c.asOf) + ')' : '') + '. Full range about ' + c.fullRangeMiles + ' miles.' : 'No reading logged yet, so this assumes 50%. Log one below.'));
+      var l = el('div', { class: 'sub', style: 'margin-top:8px;line-height:1.5' });
+      l.appendChild(el('div', null, 'Typical day: ' + fmt(c.dailyMiles, 0) + ' miles (' + c.dailySource + '); about ' + c.weekMiles + ' miles and ' + fmt(c.weekKwh, 0) + ' kWh a week, roughly ' + pounds(c.weekCostP) + ' a week at the ' + fmt(C2.nightP, 1) + 'p night rate.'));
+      l.appendChild(el('div', null, 'Lasts about ' + fmt(c.daysToMin, 1) + ' more days before reaching ' + C2.minPct + '%.'));
+      d.appendChild(l); grid.appendChild(d);
+    });
+    if (!C2.dadOn) { var dd = el('div', { class: 'card' }); dd.appendChild(el('div', { class: 'sub' }, 'Dad\'s car')); dd.appendChild(el('div', { style: 'margin-top:6px' }, 'Switched off for now. When he gets one, set "Dad has an electric car" to on in Setup, add its model and battery size, and it joins the plan.')); grid.appendChild(dd); }
+    out.appendChild(grid);
+    // plan
+    var pc = el('div', { class: 'card', style: 'margin-top:10px' }), ps = el('div', { class: 'scroll' }); pc.appendChild(el('h2', { style: 'font-size:14px' }, 'Which car on the charger, next 7 nights'));
+    pc.appendChild(el('div', { class: 'sub' }, 'One charger, so one car a night. Plans keep both cars above ' + C2.minPct + '%, charge to ' + C2.targetPct + '% normally, and use the ' + C2.tariff + ' night rate. Based on typical use, so a long trip means log a reading and look again.')); pc.appendChild(ps);
+    var head = ['Night'].concat(C2.cars.map(function (c) { return c.owner; })).concat(['Note']);
+    table(ps, head, C2.plan.map(function (r) {
+      var cells = [dayLabel(r.date)]; C2.cars.forEach(function (c) { var x = r.cars.filter(function (y) { return y.id === c.id; })[0]; cells.push(!x ? '–' : x.charge ? 'Charge ' + x.fromPct + '% to ' + x.toPct + '% (' + fmt(x.kwh, 1) + ' kWh, ' + pounds(x.costP) + ')' + (x.full ? ', full charge' : '') : 'No charge needed, ends ' + x.endPct + '%'); });
+      cells.push(r.note || ''); return cells;
+    }));
+    out.appendChild(pc);
+    // log
+    var lc = el('div', { class: 'card', style: 'margin-top:10px' }); lc.appendChild(el('h2', { style: 'font-size:14px' }, 'Readings'));
+    lc.appendChild(el('div', { class: 'sub' }, 'The more often the battery % and odometer are logged, the better the estimates of use and range. A reading now and then is enough: every few days, and after a long trip.'));
+    if (C2.owner) {
+      var f = el('div', { class: 'daybar' }), sel = el('select', { class: 'btn sm' }), soc = el('input', { type: 'number', min: 0, max: 100, placeholder: 'Battery %', style: 'width:100px' }), odo = el('input', { type: 'number', min: 0, placeholder: 'Odometer (miles)', style: 'width:150px' }), sv = el('button', { class: 'btn primary sm', type: 'button' }, 'Save reading');
+      C2.cars.forEach(function (c) { sel.appendChild(el('option', { value: c.id }, c.owner + '\'s car')); });
+      sv.addEventListener('click', function () { sv.disabled = true; gs('carLogAdd', [sel.value, soc.value, odo.value], function (r) { CAR = r; renderCar(); }, function (e) { sv.disabled = false; var m = $('carMsg'); m.hidden = false; m.textContent = 'Could not save: ' + e; }); });
+      [sel, soc, odo, sv].forEach(function (n) { f.appendChild(n); }); lc.appendChild(f);
+    } else lc.appendChild(el('div', { class: 'sub' }, 'Readings are added by the owner.'));
+    if (C2.log.length) { var ls = el('div', { class: 'scroll' }); lc.appendChild(ls); table(ls, ['When', 'Car', 'Battery', 'Odometer'], C2.log.map(function (r) { return [dayLabel(localDateOf(r.t)) + ' ' + hhmm(r.t), r.car === 'dad' ? 'Dad' : 'Billy', r.soc + '%', r.odo === null ? '–' : r.odo + ' mi']; })); }
+    out.appendChild(lc);
+    // spare solar
+    if (C2.months && C2.months.length) {
+      var sc = el('div', { class: 'card', style: 'margin-top:10px' }), ss = el('div', { class: 'scroll' }); sc.appendChild(el('h2', { style: 'font-size:14px' }, 'Spare solar for the cars, month by month'));
+      sc.appendChild(el('div', { class: 'sub' }, 'The cars need about ' + fmt(C2.needKwhDay, 1) + ' kWh a day. "Spare" is solar the house and battery cannot use and the ' + (C2.exportCap ? C2.exportCap + ' kWh a day' : 'export') + ' limit would waste: charging the car from it is free. Solar above that is still worth more charged into the car than exported only when the export price is below the ' + fmt(C2.nightP, 1) + 'p night rate. A modelled estimate that firms up as more days are recorded.')); sc.appendChild(ss);
+      table(ss, ['Month', 'Solar left over after the house (kWh a day)', 'Of which would be wasted over the export limit', 'Could cover this much of the car\'s use'], C2.months.map(function (m) { var p = m[0].split('-'); return [['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+p[1] - 1] + ' ' + p[0], fmt(m[1], 1), fmt(m[2], 1), m[3] + '%']; }));
+      out.appendChild(sc);
+    }
+  }
+  function localDateOf(ms) { var d = new Date(ms + (TZ === 'Europe/London' ? 0 : 0)); try { return new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d); } catch (e) { return d.toISOString().slice(0, 10); } }
+  function loadBr() { gs('getBrain', [(window.__ACCESS__ || {}).key || ''], renderBr, function (e) { var m = $('brMsg'); m.hidden = false; m.textContent = 'Could not load this page: ' + e; }); }
+  function renderBr(B) {
+    $('brMsg').hidden = true; var out = $('brOut'); clear(out);
+    B.sections.forEach(function (S) {
+      var card = el('div', { class: 'card', style: 'margin-top:14px' }); card.appendChild(el('h2', { style: 'font-size:14px' }, S.title));
+      if (S.intro) card.appendChild(el('div', { class: 'sub' }, S.intro));
+      if (S.items && S.items.length) {
+        var ul = el('ul', { class: 'q' });
+        S.items.forEach(function (i) {
+          var li = el('li'), cls = i.state === 'ok' ? 'good' : i.state === 'crit' ? 'crit' : i.state === 'warn' || i.state === 'wait' ? 'warn' : 'na', sym = i.state === 'ok' ? '✓' : i.state === 'crit' ? '×' : i.state === 'warn' || i.state === 'wait' ? '!' : 'i', box = el('div');
+          li.appendChild(el('span', { class: 'ic ' + cls, 'aria-hidden': 'true' }, sym)); box.appendChild(el('b', null, i.head)); box.appendChild(el('div', { class: 'sub' }, i.text)); li.appendChild(box); ul.appendChild(li);
+        });
+        card.appendChild(ul);
+      }
+      if (S.table && S.table.rows.length) {
+        var wrap = el('div', { class: 'scroll', style: 'margin-top:8px' }), t = el('table'), hr = el('tr'); S.table.cols.forEach(function (c) { hr.appendChild(el('th', null, c)); }); t.appendChild(hr);
+        S.table.rows.forEach(function (r) { var tr = el('tr'); r.forEach(function (v) { tr.appendChild(el('td', null, String(v))); }); t.appendChild(tr); }); wrap.appendChild(t); card.appendChild(wrap);
+      }
+      if (S.source) card.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, 'Weather source being used for new samples: ' + S.source + '.'));
+      out.appendChild(card);
+    });
+  }
+  var SHD = null;
+  function loadSh() { gs('getSummerhouse', [(window.__ACCESS__ || {}).key || ''], function (r) { SHD = r; renderSh(r); }, function (e) { var m = $('shMsg'); m.hidden = false; m.textContent = 'Could not load the summerhouse: ' + e; }); }
+  function shKe(M, wind, dirQ, rain) { return M.k + (M.kwq ? M.kwq[dirQ] : (M.kw || 0)) * wind + (M.kr || 0) * rain; }
+  var COMPASS = ['north', 'east', 'south', 'west'];
+  function dirQuad(d) { d = ((Number(d) % 360) + 360) % 360; return d >= 315 || d < 45 ? 0 : d < 135 ? 1 : d < 225 ? 2 : 3; }
+  function shTime(M, from, to, temp, wind, sun, onFlag, dirQ, rain) {
+    // minutes to go from `from` to `to` degrees, or null if it never gets there. Room: dT/dt = (heater ? h : 0) - (k + kw*wind)(T - out) + s*sun
+    var ke = shKe(M, wind, dirQ, rain), gain = (M.s || 0) * sun + (onFlag ? M.h : 0), eq = temp + gain / ke;
+    if ((to - from) * (eq - from) <= 0 || Math.abs(eq - to) < 1e-6 || (to > from) !== (eq > to)) return null;
+    return Math.log((from - eq) / (to - eq)) / ke * 60;
+  }
+  function shFmtMin(m) { return m === null ? 'not reachable in these conditions' : m < 90 ? 'about ' + Math.max(1, Math.round(m)) + ' minutes' : 'about ' + (m / 60).toFixed(1) + ' hours'; }
+  function renderSh(S) {
+    var msg = $('shMsg'), now = $('shNow'); clear(now);
+    ['shLearn', 'shOut', 'shInputs'].forEach(function (id) { clear($(id)); });
+    if (!S.configured) { msg.hidden = false; msg.textContent = 'Not set up yet. Set up Smart Life in Setup (User Code, sign-in, heater), then press "Test Smart Life heater".'; $('shCalc').hidden = true; clear($('chSh')); clear($('shHeat')); clear($('tblShFc')); return; }
+    msg.hidden = true;
+    var L = S.latest;
+    function stat(label, val, sub) { var c = el('div', { class: 'card' }); c.appendChild(el('div', { class: 'sub' }, label)); c.appendChild(el('div', { style: 'font-size:26px;font-weight:600' }, val)); if (sub) c.appendChild(el('div', { class: 'sub' }, sub)); now.appendChild(c); }
+    if (L) {
+      stat('Inside now', fmt(L.temp, 1) + '°C', 'Read ' + ago(L.ageMin));
+      var fw = (S.forecast || [])[0];
+      stat('Outside now', L.out === null ? '–' : fmt(L.out, 1) + '°C', fw ? 'Wind ' + fmt(fw[2], 1) + ' m/s' + (fw[4] !== null && fw[4] !== undefined ? ' from the ' + COMPASS[dirQuad(fw[4])] : '') + ' · sun ' + Math.round(fw[3] || 0) + ' W/m²' + (fw[5] ? ' · rain ' + fmt(fw[5], 1) + ' mm/h' : '') : '');
+      stat('Heater', L.heating ? 'Heating' : 'Not heating', L.power !== null ? Math.round(L.power) + ' W' : 'Judged from the on/off switch');
+    } else stat('Inside now', '–', 'No readings yet. One is saved with each inverter read (every 10 minutes).');
+    var ser = S.series || [], xs = ser.map(function (r) { return hhmm(r[0]); }), ticks = [], seen = {};
+    ser.forEach(function (r, i) { var h = Number(hhmm(r[0]).slice(0, 2)), m = Number(hhmm(r[0]).slice(3)); var step = (window.innerWidth || 800) < 560 ? 12 : 6, bk = Math.floor(r[0] / (step * 3600e3)); if (h % step === 0 && m < 10 && !seen[bk]) { seen[bk] = 1; ticks.push(i); } });
+    $('shLegend').textContent = 'Inside (orange line) and outside (grey line), °C. Bars below: when the heater was heating.';
+    lineChart($('chSh'), { x: xs, series: [{ name: 'Inside', color: C.ours, values: ser.map(function (r) { return r[1]; }) }, { name: 'Outside', color: C.plain, values: ser.map(function (r) { return r[2]; }) }], yFmt: function (v) { return Math.round(v) + '°'; }, xTickIdx: ticks, right: 0, empty: 'Appears once the first readings are in.', label: 'Summerhouse inside and outside temperature, last 48 hours' });
+    var hs = $('shHeat'); clear(hs);
+    if (ser.length > 1) {
+      var W = 720, t0 = ser[0][0], t1 = ser[ser.length - 1][0] || t0 + 1, sv = svg('svg', { viewBox: '0 0 ' + W + ' 14', preserveAspectRatio: 'none', role: 'img', 'aria-label': 'Heater on times', style: 'display:block;width:100%;height:14px' });
+      sv.appendChild(svg('rect', { x: 0, y: 0, width: W, height: 14, rx: 3, fill: 'var(--axis)', opacity: '0.25' }));
+      ser.forEach(function (r) { if (r[3]) sv.appendChild(svg('rect', { x: (r[0] - t0) / (t1 - t0) * W - 1.5, y: 1, width: 3, height: 12, fill: 'var(--ours)' })); });
+      hs.appendChild(sv);
+    }
+    var M = S.model || {}, ul = $('shLearn');
+    function li(state, title, detail) { var l = el('li'), ic = el('span', { class: 'ic ' + state }, state === 'good' ? '✓' : state === 'warn' ? '!' : '–'); ic.setAttribute('aria-hidden', 'true'); l.appendChild(ic); var d = el('div'); d.appendChild(el('b', null, title)); d.appendChild(el('span', { class: 'd' }, detail)); l.appendChild(d); ul.appendChild(l); }
+    var days = S.firstT ? Math.max(0, (S.now - S.firstT) / 86400e3) : 0;
+    li(S.samples > 100 ? 'good' : 'warn', 'Readings', S.samples + ' readings over ' + days.toFixed(1) + ' days (one every 10 minutes).');
+    if (M.k) li('good', 'Heat loss', 'Each hour the room loses ' + Math.round((1 - Math.exp(-M.k)) * 100) + '% of the gap to the outside (it takes about ' + fmt(M.tauH, 1) + ' hours to lose two thirds of it).' + (M.usesDirection ? '' : M.usesWind ? ' Wind makes this worse: +' + fmt(M.kw / M.k * 100, 0) + '% for each m/s.' : ' No wind effect found yet.'));
+    else li('warn', 'Heat loss', 'Still learning. It needs cooling spells with the heater off (' + (M.nOff || 0) + ' of about 24 so far).');
+    if (M.k && M.usesDirection) { var worst = 0; M.kwq.forEach(function (v, i) { if (v > M.kwq[worst]) worst = i; }); li('good', 'Wind direction', 'Wind from the ' + COMPASS[worst] + ' chills it most (' + fmt(M.kwq[worst] / M.k * 100, 0) + '% extra loss per m/s), from the ' + COMPASS[M.kwq.indexOf(Math.min.apply(null, M.kwq))] + ' least.'); }
+    else if (M.k) li('warn', 'Wind direction', 'Not separated yet. It needs windy spells from every direction, which takes several weeks.');
+    if (M.k) li(M.usesRain ? 'good' : 'warn', 'Rain', M.usesRain ? 'Rain adds about ' + fmt(M.kr / M.k * 100, 0) + '% to the heat loss for each mm an hour.' : 'No clear rain effect found yet (needs wet spells with the heater off).');
+    if (M.k) li(M.usesSun ? 'good' : 'warn', 'Sunshine', M.usesSun ? 'Bright sun (500 W/m²) warms the room by about ' + fmt(M.s * 500, 1) + '°C an hour.' : 'No clear sun effect found yet (needs more sunny days).');
+    if (M.h) li('good', 'Heater', 'Warms the room by about ' + fmt(M.h, 1) + '°C an hour before losses.'); else li('warn', 'Heater', 'Still learning. It needs heating spells (' + (M.nOn || 0) + ' of about 12 so far).');
+    li(M.ready ? 'good' : 'warn', 'Confidence', M.ready ? 'Enough data for useful estimates. They keep improving through the winter as the weather changes.' : 'Not enough yet. Expect about two weeks, including some cold nights and some heated mornings.');
+    var calc = $('shCalc'); calc.hidden = !(M.k && M.h);
+    if (M.k && M.h) {
+      var fw0 = (S.forecast || [])[0] || [], def = { from: L && L.temp !== null ? Math.round(L.temp) : 10, to: 18, out: L && L.out !== null ? Math.round(L.out) : 5, wind: Math.round(fw0[2] || 3), dir: fw0[4] !== undefined && fw0[4] !== null ? COMPASS[dirQuad(fw0[4])] : 'west', rain: 0, sun: 0 }, inp = {};
+      [['from', 'Start (°C)'], ['to', 'Target (°C)'], ['out', 'Outside (°C)'], ['wind', 'Wind (m/s)'], ['dir', 'Wind from (north, east, south, west)'], ['rain', 'Rain (mm/h)'], ['sun', 'Sun (W/m²)']].forEach(function (d) { var lab = el('label', null, d[1]), i = d[0] === 'dir' ? el('select') : el('input', { type: 'number', inputmode: 'decimal', step: 'any', value: String(def[d[0]]) }); if (d[0] === 'dir') { COMPASS.forEach(function (cn) { var op = el('option', { value: cn }, cn); if (cn === def.dir) op.selected = true; i.appendChild(op); }); i.style.cssText = 'font:inherit;font-size:15px;padding:7px 9px;border-radius:8px;border:1px solid var(--axis);background:var(--page);color:var(--ink);width:100%;box-sizing:border-box'; } lab.appendChild(i); $('shInputs').appendChild(lab); inp[d[0]] = i; i.addEventListener('input', calcOut); i.addEventListener('change', calcOut); });
+      function v(k) { var x = Number(inp[k].value); return isNaN(x) ? 0 : x; }
+      function calcOut() {
+        var o = $('shOut'); clear(o); var a = v('from'), b = v('to'), t = v('out'), w = Math.max(0, v('wind')), sn = Math.max(0, v('sun')), dq = Math.max(0, COMPASS.indexOf(inp.dir.value)), rn = Math.max(0, v('rain'));
+        function row(h, d) { var x = el('div', { class: 'o' }); x.appendChild(el('b', null, h)); x.appendChild(el('span', null, d)); o.appendChild(x); }
+        if (b > a) { var mm = shTime(M, a, b, t, w, sn, true, dq, rn), ke = shKe(M, w, dq, rn), plat = t + (M.h + (M.s || 0) * sn) / ke; row('Warm-up from ' + a + '° to ' + b + '°: ' + shFmtMin(mm), 'With the heater on, at ' + t + '° outside, wind ' + w + ' m/s.' + (mm === null ? ' The heater alone levels off at about ' + plat.toFixed(1) + '°.' : '')); }
+        else if (b < a) row('Cool-down from ' + a + '° to ' + b + '°: ' + shFmtMin(shTime(M, a, b, t, w, sn, false, dq, rn)), 'With the heater off, at ' + t + '° outside, wind ' + w + ' m/s from the ' + COMPASS[dq] + '.');
+        else row('Already at the target', '');
+      }
+      calcOut();
+    }
+    var tb = $('tblShFc'); clear(tb); var hd = el('tr'); ['Time', '°C', 'Wind', 'Sun'].forEach(function (x) { hd.appendChild(el('th', null, x)); }); tb.appendChild(hd);
+    (S.forecast || []).filter(function (r, i) { return i % 3 === 0; }).forEach(function (r) { var tr = el('tr'); [hhmm(r[0]), fmt(r[1], 1) + '°', fmt(r[2], 1), String(Math.round(r[3] || 0))].forEach(function (x) { tr.appendChild(el('td', null, x)); }); tb.appendChild(tr); });
+    if (!(S.forecast || []).length) { var e = el('tr'), c = el('td', null, 'Waiting for the Open-Meteo forecast.'); c.setAttribute('colspan', 4); c.className = 'muted'; e.appendChild(c); tb.appendChild(e); }
+  }
+  function renderActivity(A) {
+    var st = $('actStatus'); st.className = 'banner' + (A.summary === 'ok' ? '' : ' sample');
+    st.textContent = A.summary === 'ok' ? (A.jobs.some(function (j) { return j.status === 'wait' && j.id !== 'weeklyLearn'; }) ? 'Running. Some jobs have not run since this page was installed, so they show as waiting.' : 'Everything is running on time.') : A.summary === 'fail' ? 'A job failed its last run. Details are in the Setup tab.' : 'A job has not run when expected.';
+    var box = $('actTimeline'); clear(box); var W = 720, day = 24 * 3600e3;
+    function X(t) { return Math.max(1, Math.min(W - 1, (t - A.dayStartMs) / day * W)); }
+    A.jobs.forEach(function (j) {
+      var row = el('div', { class: 'jr' }), lab = el('div', { class: 'jl' }); lab.appendChild(el('span', null, j.label)); lab.appendChild(el('span', null, j.runsToday + (j.runsToday === 1 ? ' run today' : ' runs today') + ' · ' + j.every)); row.appendChild(lab);
+      var s = svg('svg', { viewBox: '0 0 ' + W + ' 20', preserveAspectRatio: 'none', role: 'img', 'aria-label': j.label + ': ' + j.runsToday + ' runs today' });
+      s.appendChild(svg('rect', { x: 0, y: 0, width: W, height: 20, rx: 3, fill: 'var(--axis)', opacity: '0.25' }));
+      s.appendChild(svg('rect', { x: X(A.now), y: 0, width: W - X(A.now), height: 20, fill: 'var(--page)', opacity: '0.45' }));
+      A.runs.forEach(function (r) { if (r[1] !== j.id) return; s.appendChild(svg('rect', { x: X(r[0]) - 1.5, y: r[2] ? 5 : 2, width: 3, height: r[2] ? 10 : 16, fill: r[2] ? 'var(--good)' : 'var(--crit)' })); });
+      (j.times || []).forEach(function (h) { var t = A.dayStartMs + h * 3600e3; if (t > A.now) s.appendChild(svg('rect', { x: X(t) - 1.5, y: 5, width: 3, height: 10, fill: 'none', stroke: 'var(--ink2)', 'stroke-width': 1.2, 'vector-effect': 'non-scaling-stroke' })); });
+      s.appendChild(svg('line', { x1: X(A.now), x2: X(A.now), y1: 0, y2: 20, stroke: 'var(--ink)', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }));
+      row.appendChild(s); box.appendChild(row);
+    });
+    var ax = el('div', { class: 'jl' }); ['00:00', '06:00', '12:00', '18:00', '24:00'].forEach(function (h) { ax.appendChild(el('span', null, h)); }); box.appendChild(ax);
+    $('actLegend').textContent = 'The dark line is now (' + hhmm(A.now) + '). Green = worked, red = failed, hollow mark = due later today.';
+    var t = $('tblAct'); clear(t); var h = el('tr'); ['Job', 'Last run', 'Result', 'Runs'].forEach(function (x, i) { h.appendChild(el('th', i === 3 ? { class: 'wide' } : null, x)); }); t.appendChild(h);
+    A.jobs.forEach(function (j) {
+      var tr = el('tr'), c0 = el('td'); c0.appendChild(el('b', null, j.label)); c0.appendChild(el('div', { class: 'kw' }, j.what + ' (' + j.every + ')')); tr.appendChild(c0);
+      tr.appendChild(el('td', null, j.last ? ago((A.now - j.last) / 60000) : 'not yet'));
+      var td = el('td'), txt = j.status === 'ok' ? 'worked' : j.status === 'fail' ? 'failed' : j.status === 'late' ? 'overdue' : j.status === 'off' ? 'not set up' : 'waiting';
+      td.appendChild(el('span', { class: 'st ' + (j.status === 'ok' ? 'ok' : j.status === 'fail' ? 'fail' : j.status === 'late' ? 'late' : '') }, txt)); tr.appendChild(td);
+      tr.appendChild(el('td', { class: 'wide' }, String(j.runsToday))); t.appendChild(tr);
+    });
+  }
+  $('tabDash').addEventListener('click', function () { showTab('dash'); }); $('tabSetup').addEventListener('click', function () { showTab('setup'); }); $('tabLog').addEventListener('click', function () { showTab('log'); });
+  $('tabAct').addEventListener('click', function () { showTab('act'); }); $('tabSh').addEventListener('click', function () { showTab('sh'); }); $('tabTf').addEventListener('click', function () { showTab('tf'); }); $('tabCar').addEventListener('click', function () { showTab('car'); }); $('tabBr').addEventListener('click', function () { showTab('br'); });
+  function render(d) {
+    D = d; TZ = d.tz || TZ; $('main').classList.remove('loading'); clear($('banners'));
+    if (d.setupDone === false) { var b0 = el('div', { class: 'banner' }); b0.appendChild(el('span', { class: 'ic' }, '!')); var sp = el('span', null, 'Setup is not finished, so there is no live data yet. '); if (ACC.owner) { var lk = el('a', { href: '#' }, 'Open Setup'); lk.addEventListener('click', function (e) { e.preventDefault(); showTab('setup'); }); sp.appendChild(lk); } b0.appendChild(sp); $('banners').appendChild(b0); }
+    if (d.sample) banner('sample', '!', 'SAMPLE DATA. These numbers are synthetic and only show the layout. Nothing here is Dad\'s real result.');
+    $('tariff').textContent = d.tariff || '–';
+    $('fresh').textContent = d.live ? 'Updated ' + ago(d.live.ageMin) : 'No readings yet';
+    $('exportState').textContent = d.exportEnabled ? 'on' : 'off';
+    renderHero(); renderKpis(); renderToday(); if (!dayPack || !selDate) loadDay(selDate); else renderDay(); renderPlan(); renderHistory(); renderLog(); renderForecast(); renderQuality(); renderLearn();
+    $('foot').textContent = 'Generated ' + new Intl.DateTimeFormat('en-GB', { timeZone: TZ, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(d.generated)) + '. Refreshes every 5 minutes.';
+  }
+  function fail(e) { $('main').classList.remove('loading'); clear($('banners')); banner('', '×', 'Could not load the data: ' + (e && e.message ? e.message : e)); }
+  function load() {
+    $('main').classList.add('loading');
+    if ((window.google && google.script && google.script.run) || (window.__API__ && window.__API__.url)) gs('getDashboard', [(window.__ACCESS__ || {}).key || ''], render, fail);
+    else if (window.__DASH__) render(window.__DASH__);
+    else fail('no data source');
+  }
+  var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { if (D) { renderToday(); renderDayCharts(); renderPlan(); renderHistory(); if (!$('viewLog').hidden) renderLog(); } }, 150); });
+  // phone bottom bar and "More" sheet
+  Array.prototype.forEach.call(document.querySelectorAll('#botbar button'), function (b) { b.addEventListener('click', function () { var t = b.getAttribute('data-t'); if (t === 'more') $('moreSheet').hidden = !$('moreSheet').hidden; else showTab(t); window.scrollTo(0, 0); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('#moreSheet button[data-t]'), function (b) { b.addEventListener('click', function () { showTab(b.getAttribute('data-t')); window.scrollTo(0, 0); }); });
+  $('themeBtn').addEventListener('click', function () { var cur = document.documentElement.getAttribute('data-theme') || ''; themePref = cur === 'light' ? 'dark' : 'light'; try { localStorage.setItem('theme', themePref); } catch (e) {} applyTheme(); if (D) { renderToday(); renderDayCharts(); renderPlan(); renderHistory(); } });
+  applyTheme();
+  // pull down to refresh (only when opened from the Home Screen, where the browser has no refresh of its own)
+  (function () {
+    var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (!standalone) return;
+    var y0 = null, dy = 0, bar = $('ptr');
+    function refreshCurrent() {
+      var t = curTab;
+      if (t === 'dash' || t === 'log') { load(); try { loadDay(selDate); } catch (e) {} } else if (t === 'act') loadActivity(); else if (t === 'br') loadBr(); else if (t === 'tf') loadTf(); else if (t === 'car') loadCar(); else if (t === 'sh') loadSh(); else showTab('setup');
+    }
+    document.addEventListener('touchstart', function (e) { y0 = (window.scrollY <= 0 && e.touches.length === 1) ? e.touches[0].clientY : null; dy = 0; }, { passive: true });
+    document.addEventListener('touchmove', function (e) { if (y0 === null) return; dy = e.touches[0].clientY - y0; if (dy > 20) { bar.textContent = dy > 80 ? 'Release to refresh' : 'Pull down to refresh'; bar.classList.add('on'); } else bar.classList.remove('on'); }, { passive: true });
+    document.addEventListener('touchend', function () { if (y0 !== null && dy > 80) { bar.textContent = 'Refreshing…'; refreshCurrent(); setTimeout(function () { bar.classList.remove('on'); }, 900); } else bar.classList.remove('on'); y0 = null; dy = 0; }, { passive: true });
+  })();
+  load(); setInterval(load, 5 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
