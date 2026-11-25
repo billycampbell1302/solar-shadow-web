@@ -839,6 +839,15 @@
   function gs(fn, args, ok, bad) {
     if (window.google && google.script && google.script.run) { var r = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { bad(e && e.message ? e.message : String(e)); }); r[fn].apply(r, args); }
     else if (window.__API__ && window.__API__.url) {
+      // Show what this phone saw last time straight away (read-only pages), then replace it with fresh data.
+      var ck = null, shown = false;
+      if (/^get(Dashboard|Day|Tariffs|Cars|Activity|Brain|Summerhouse)$/.test(fn)) {
+        ck = 'c:' + fn + ':' + JSON.stringify(args);
+        try { var raw = localStorage.getItem(ck); if (raw) { var cv = JSON.parse(raw); if (cv && cv.r !== undefined) { shown = true; setTimeout(function () { ok(cv.r); }, 0); } } } catch (e) {}
+        var ok0 = ok, bad0 = bad;
+        ok = function (r) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), r: r })); } catch (e) {} ok0(r); };
+        bad = function (m) { if (shown) return; bad0(m); };
+      }
       // static phone site: same calls over HTTPS (text/plain keeps it a simple request, so no CORS preflight)
       var done = false, tries = 0, to = setTimeout(function () { if (!done) { done = true; bad('Timed out. Check your connection and pull down to refresh.'); } }, 90000);
       (function go() {
@@ -1253,10 +1262,17 @@
     renderHero(); renderKpis(); renderToday(); if (!dayPack || !selDate) loadDay(selDate); else renderDay(); renderPlan(); renderHistory(); renderLog(); renderForecast(); renderQuality(); renderLearn();
     $('foot').textContent = 'Generated ' + new Intl.DateTimeFormat('en-GB', { timeZone: TZ, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(d.generated)) + '. Refreshes every 5 minutes.';
   }
+  // Phone site: once the dashboard is up, quietly fetch the other tabs one after another so they open instantly (answers are kept on the phone by gs()).
+  var prefetched = false;
+  function prefetchTabs() {
+    if (prefetched || !(window.__API__ && window.__API__.url)) return; prefetched = true;
+    var k = (window.__ACCESS__ || {}).key || '', q = ['getTariffs', 'getCars', 'getBrain', 'getSummerhouse', 'getActivity'];
+    (function next() { var fn = q.shift(); if (!fn) return; gs(fn, [k], function () { setTimeout(next, 300); }, function () { setTimeout(next, 300); }); })();
+  }
   function fail(e) { $('main').classList.remove('loading'); clear($('banners')); banner('', '×', 'Could not load the data: ' + (e && e.message ? e.message : e)); }
   function load() {
     $('main').classList.add('loading');
-    if ((window.google && google.script && google.script.run) || (window.__API__ && window.__API__.url)) gs('getDashboard', [(window.__ACCESS__ || {}).key || ''], render, fail);
+    if ((window.google && google.script && google.script.run) || (window.__API__ && window.__API__.url)) gs('getDashboard', [(window.__ACCESS__ || {}).key || ''], function (d) { render(d); prefetchTabs(); }, fail);
     else if (window.__DASH__) render(window.__DASH__);
     else fail('no data source');
   }
