@@ -826,6 +826,17 @@
   }
   // ---------------------------------------------------------------- setup tab
   var S = null, openGroups = {};
+  // Fallback for browsers that block the normal request: load the answer through a script tag (read-only calls only).
+  var jpN = 0;
+  function jsonp(fn, args, ok, bad) {
+    var name = '__jp' + (++jpN) + '_' + Date.now(), sc = document.createElement('script'), fin = false;
+    function end() { fin = true; try { delete window[name]; } catch (e) { window[name] = undefined; } if (sc.parentNode) sc.parentNode.removeChild(sc); }
+    window[name] = function (j) { if (fin) return; end(); if (j && j.ok) ok(j.r); else bad((j && j.e) || 'The server said no'); };
+    sc.onerror = function () { if (fin) return; end(); bad('Could not reach the server'); };
+    setTimeout(function () { if (!fin) { end(); bad('Timed out'); } }, 60000);
+    sc.src = window.__API__.url + '?api=1&fn=' + encodeURIComponent(fn) + '&a=' + encodeURIComponent(JSON.stringify(args)) + '&o=' + encodeURIComponent(window.__API__.owner || '') + '&cb=' + name;
+    document.head.appendChild(sc);
+  }
   function gs(fn, args, ok, bad) {
     if (window.google && google.script && google.script.run) { var r = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { bad(e && e.message ? e.message : String(e)); }); r[fn].apply(r, args); }
     else if (window.__API__ && window.__API__.url) {
@@ -838,7 +849,7 @@
           .then(function (t) { if (done) return; var j = null; try { j = JSON.parse(t); } catch (e) {}
             if (!j) { done = true; clearTimeout(to); bad('The server sent something unexpected: ' + String(t).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').slice(0, 120)); return; }
             done = true; clearTimeout(to); if (j.ok) ok(j.r); else bad(j.e || 'The server said no'); })
-          .catch(function (e) { if (done) return; if (tries < 3) { setTimeout(go, 1500 * tries); return; } done = true; clearTimeout(to); bad('Could not reach the server after 3 tries (' + (e && e.name ? e.name + ': ' : '') + (e && e.message ? e.message : e) + ')'); });
+          .catch(function (e) { if (done) return; if (tries < 2) { setTimeout(go, 1200); return; } if (/^get[A-Z]/.test(fn)) { jsonp(fn, args, function (r) { if (done) return; done = true; clearTimeout(to); ok(r); }, function (m) { if (done) return; done = true; clearTimeout(to); bad(m + ' (' + (e && e.name ? e.name + ': ' : '') + (e && e.message ? e.message : e) + ')'); }); return; } done = true; clearTimeout(to); bad('Could not reach the server (' + (e && e.name ? e.name + ': ' : '') + (e && e.message ? e.message : e) + ')'); });
       })();
     }
     else if (window.__SETUP__ && window.__SETUP__[fn]) ok(window.__SETUP__[fn].apply(null, args)); else bad('not available here');
