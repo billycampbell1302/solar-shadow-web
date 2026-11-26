@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '9dae2d0ef9', u = new URL(location.href);
+    var id = '5d4fc538db', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -535,7 +535,7 @@
   <div id="banners"></div>
 
   <div id="viewDash">
-  <section class="card hero" aria-label="Headline">
+  <section class="card hero" aria-label="Headline" hidden>
     <div><div class="num" id="heroNum">–</div></div>
     <div><div class="lbl" id="heroLbl">Waiting for the first finished day.</div><div class="sub" id="heroSub"></div></div>
   </section>
@@ -554,7 +554,7 @@
     <div class="daynote" id="dayNotes"></div>
     <div class="sub" id="todaySub">Four ways of running today, on the same real solar, house use and prices.</div>
     <div class="grid2" style="margin-top:10px">
-      <div class="card"><div class="bars" id="scoreBars"></div><div class="sub" id="scoreNote" style="margin-top:6px"></div></div>
+      <div class="card"><div class="bars" id="scoreBars"></div><div class="sub" id="scoreNote" style="margin-top:6px"></div><div id="dayWhy" style="margin-top:10px" hidden></div></div>
       <div class="card"><h2 style="font-size:14px">Battery level through the day</h2><div class="legend" id="todayLegend"></div><div class="chart" id="chToday"></div><details><summary>View as table</summary><div class="scroll" id="tblToday"></div></details></div>
     </div>
     <div id="dayCharts">
@@ -574,6 +574,7 @@
   <section aria-label="Plan">
     <h2>Next 24 hours: what our software would do</h2>
     <div class="sub" id="planSub">Not sent anywhere. This is the plan it would be following if it were in charge.</div>
+    <div class="card" id="projCard" style="margin-top:10px" hidden></div>
     <div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">Planned battery level</h2><div class="chart" id="chPlanSoc"></div></div>
       <div class="card"><h2 style="font-size:14px">Planned battery power</h2><div class="legend"><span><i class="box" style="background:var(--ours)"></i>Charging</span><span><i class="box" style="background:var(--ours-soft)"></i>Discharging</span></div><div class="chart" id="chPlanPow"></div></div>
@@ -597,6 +598,32 @@
     <div class="card scroll" style="margin-top:10px"><div id="fcVerdict" class="sub" style="margin-bottom:6px"></div><table id="tblFc"></table></div>
   </section>
 
+  <section aria-label="Base load">
+    <h2>Base load</h2>
+    <div class="sub" id="blSum">Loading…</div>
+    <div class="card" id="blCard" hidden>
+      <div class="grid2" id="blNums"></div>
+      <div class="sub" style="margin:10px 0 4px">Typical house use through the day (median of every day saved). The line is the base load.</div>
+      <div id="blBars" style="position:relative;display:flex;align-items:flex-end;gap:2px;height:90px"></div>
+      <div style="display:flex;justify-content:space-between" class="sub"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+    </div>
+  </section>
+
+  <section aria-label="Long run">
+    <h2>The long run</h2>
+    <div class="sub" id="lrSum">Waiting for finished days.</div>
+    <div class="card scroll" id="lrCard" hidden><table id="tblLong"></table><div class="sub" id="lrNote" style="margin-top:8px"></div></div>
+  </section>
+
+  <section aria-label="System losses">
+    <h2>What the system loses</h2>
+    <div class="sub" id="slSum">Loading…</div>
+    <div class="card" id="slCard" hidden>
+      <div class="grid2" id="slNums"></div>
+      <div class="sub" id="slNote" style="margin-top:8px"></div>
+    </div>
+  </section>
+
   <section aria-label="Solar accuracy">
     <h2>Solar forecast against actual</h2>
     <div class="sub" id="accSum">Loading…</div>
@@ -618,7 +645,7 @@
       <li><b>Predbat (replay).</b> Predbat's real planner, run on the same saved forecasts and prices at every half hour, with its default settings. Its first action is applied to the real day. It isn't Predbat running live on Dad's system, and it is scored once a day, so it appears on finished days only, not on today's scoreboard.</li>
       <li><b>Perfect hindsight.</b> The best schedule possible if the whole day were known in advance. Nobody can reach it; it shows how much was on the table.</li>
       <li><b>Plain overnight fill.</b> A basic inverter that fills the battery in the cheap window and then just uses it. A yardstick for how smart Solis AI is being.</li>
-      <li>All four are costed the same way: money for grid power, plus battery wear, with the energy left in the battery at the end valued so a run that ends fuller isn't punished.</li>
+      <li>Every cost is only money paid to the energy company for grid power. Solis AI is the real bill; the other runs are that real bill adjusted for the battery level each one reached (more stored means more grid energy bought, less means less). Battery wear and energy left in the battery are not paid to anyone, so they are shown beside the costs and never added in.</li>
       <li>Export is <span id="exportState">off</span>, so none of the four assumes selling to the grid.</li>
     </ul>
   </section>
@@ -879,6 +906,19 @@
   // ---------------------------------------------------------------- sections
   function banner(kind, icon, text) { var b = el('div', { class: 'banner ' + kind }); b.appendChild(el('span', { class: 'ic' }, icon)); b.appendChild(el('span', null, text)); $('banners').appendChild(b); }
 
+  function renderLongRun() {
+    var ok = (D.daily || []).filter(function (r) { return r.status === 'ok'; }), sum = $('lrSum'), card = $('lrCard'); if (!sum || !card) return;
+    if (!ok.length) { sum.textContent = 'Waiting for finished days.'; card.hidden = true; return; }
+    var days = ok.length, rows = [], from = ok[ok.length - 1].date, to = ok[0].date; if (from > to) { var sw = from; from = to; to = sw; }
+    function add(name, key, only) { var set = only ? ok.filter(function (r) { return r[key] !== null && r[key] !== undefined && r[key] !== ''; }) : ok; if (!set.length) return;
+      var tot = 0, solis = 0; set.forEach(function (r) { tot += Number(r[key]); solis += Number(r.solis_cost_p); });
+      rows.push([name, set.length + (set.length === days ? '' : ' of ' + days), gbp(tot), gbp(tot / set.length), gbp(tot / set.length * 30), (name.indexOf('Solis') === 0 ? '–' : (solis - tot >= 0 ? 'saves ' : 'costs ') + gbp(Math.abs(solis - tot)) + ' over those days')]); }
+    add('Solis AI (real bill)', 'solis_cost_p'); add('Our software', 'ours_cost_p'); add('Predbat', 'predbat_cost_p', true); add('Plain overnight fill', 'plain_cost_p'); add('Perfect hindsight (benchmark only)', 'perfect_cost_p');
+    sum.textContent = days + ' finished day' + (days === 1 ? '' : 's') + ' (' + from + ' to ' + to + '). Energy-company money only, no standing charge, no battery wear.';
+    card.hidden = false; table($('tblLong'), ['', 'Days', 'Total', 'Per day', 'Per 30 days', 'Against Solis AI'], rows);
+    $('lrNote').textContent = 'Every day is run on a machine as lossy as that day\'s real Solis (its efficiency is found from its own bill and battery levels), starting from the real battery level at midnight, so losses are counted and errors cannot build up from one day to the next. Ours and Predbat decide only from the forecasts saved at the time.';
+  }
+
   function renderHero() {
     var ok = (D.daily || []).filter(function (r) { return r.status === 'ok'; });
     if (!ok.length) { $('heroNum').textContent = '–'; $('heroLbl').textContent = 'Waiting for the first finished day.'; $('heroSub').textContent = 'A day counts once it has good readings and saved forecasts for nearly every half hour. The first one appears about 00:20 after the first full day of readings.'; return; }
@@ -898,7 +938,7 @@
     function tile(label, value, sub) { var t = el('div', { class: 'tile' }); t.appendChild(el('div', { class: 'k' }, label)); t.appendChild(el('div', { class: 'v' }, value)); t.appendChild(el('div', { class: 's' }, sub || '')); k.appendChild(t); }
     if (!L) { tile('Battery', '–', 'Waiting for the first Solis reading'); tile('Rate now', fmt(D.rateNowP, 1) + 'p', D.tariff); return; }
     var grid = L.gridKw;
-    tile('Battery', fmt(L.socPct, 0) + '%', fmt(L.socPct / 100 * D.capKwh, 1) + ' of ' + fmt(D.capKwh, 1) + ' kWh usable');
+    tile('Battery', fmt(L.socPct, 0) + '%', fmt(L.socPct / 100 * D.capKwh, 1) + ' of ' + fmt(D.capKwh, 1) + ' kWh stored');
     tile('Solar', fmt(L.pvKw, 1) + ' kW', fmt(L.pvTodayKwh, 1) + ' kWh today');
     tile('House', fmt(L.loadKw, 1) + ' kW', 'using now');
     tile('Grid', grid === null ? '–' : fmt(Math.abs(grid), 1) + ' kW', grid === null ? '' : (grid > 0.05 ? 'importing' : grid < -0.05 ? 'exporting' : 'idle') + ' · ' + fmt(L.importTodayKwh, 1) + ' kWh bought today');
@@ -914,6 +954,30 @@
     if (P.error) return { error: P.error, past: true };
     return { date: P.date, startMs: P.startMs, endMs: P.startMs + P.n * 1800e3, costP: P.costP, paths: P.paths, ok: P.oursReliable && P.coverage >= 0.9, coverage: P.coverage, forecastCoverage: P.forecastCoverage, past: true };
   }
+  function explainDay(T, cost, stored) {
+    var cap = D.capKwh || 14.4, ps = T.paths || {}, S = ps.actual || [], O = ps.ours || [], g = T.gridP || {};
+    function at(p, i) { return p && p[i] !== undefined ? p[i] : null; }
+    var ci = 11, si = Math.min(S.length, O.length) - 1;   // slot 11 = 05:30, the end of the cheap rate
+    var sC = at(S, ci), oC = at(O, ci), sE = at(S, si), oE = at(O, si), out = [];
+    var d = cost.solis - cost.ours, name = d >= 0 ? 'ours' : 'Solis AI', other = d >= 0 ? 'Solis AI' : 'ours';
+    out.push((d >= 0 ? 'Ours' : 'Solis AI') + ' cost ' + gbp(Math.abs(d)) + ' less than ' + other + ' on this day (' + gbp(cost.ours) + ' against ' + gbp(cost.solis) + ', both including the standing charge).');
+    if (sC !== null && oC !== null) {
+      var dk = (oC - sC) / 100 * cap;
+      if (Math.abs(dk) >= 0.3) out.push('By the end of the cheap rate (05:30) ours had charged the battery to ' + Math.round(oC) + '% and Solis AI to ' + Math.round(sC) + '%, so ours bought about ' + fmt(Math.abs(dk), 1) + ' kWh ' + (dk > 0 ? 'more' : 'less') + ' at the night rate.');
+      else out.push('Both charged the battery to about the same level by 05:30 (ours ' + Math.round(oC) + '%, Solis AI ' + Math.round(sC) + '%), so the night buying was almost the same.');
+    }
+    var gd = (g.ours !== undefined && g.solis !== undefined) ? g.ours - g.solis : null;
+    if (gd !== null) {
+      if (sC !== null && oC !== null && oC > sC + 3 && gd < 0) out.push('Even though it started the day with more in the battery, ours still spent ' + gbp(-gd) + ' less on grid power: the extra stored energy covered the house at the morning and daytime rates, so it did not have to buy then, and the saving was bigger than the cost of charging the extra at night.');
+      else if (sC !== null && oC !== null && oC > sC + 3 && gd >= 0) out.push('Starting with more in the battery cost ours ' + gbp(gd) + ' more on grid power, because the extra was not needed later in the day.');
+      else if (sC !== null && oC !== null && oC < sC - 3 && gd > 0) out.push('Ours charged less overnight but then had to buy ' + gbp(gd) + ' more at the higher daytime rate once the battery ran out, which is why Solis AI came out cheaper.');
+      else if (sC !== null && oC !== null && oC < sC - 3 && gd <= 0) out.push('Charging less overnight meant less cheap-rate energy bought, and the solar covered the rest, so ours spent ' + gbp(-gd) + ' less on grid power.');
+      else if (Math.abs(gd) >= 1) out.push('Grid power bought differed by ' + gbp(Math.abs(gd)) + ' (' + (gd < 0 ? 'ours less' : 'Solis AI less') + '), from the timing of when the battery charged and discharged against the solar.');
+    }
+    if (sE !== null && oE !== null && Math.abs(oE - sE) > 4) out.push('At midnight ours held ' + Math.round(oE) + '% and Solis AI ' + Math.round(sE) + '%. Energy left in the battery is already paid for and is not counted in either figure, so a fuller battery at the end does not make a plan look dearer or cheaper here.');
+    if (T.gridP && T.gridP.plain !== undefined && T.gridP.perfect !== undefined) out.push('For reference, plain self-use would have cost ' + gbp(T.gridP.plain + (T.standingP || 0)) + ' and perfect hindsight ' + gbp(T.gridP.perfect + (T.standingP || 0)) + ' (a benchmark, not a fair target).');
+    return out;
+  }
   function renderToday() {
     var T = viewT(), bars = $('scoreBars'); clear(bars);
     $('todayH').textContent = pastPack() || (dayPack && dayPack.error && selDate && selDate < dayPack.maxDate) ? dayLabel(selDate) : 'Today so far';
@@ -922,19 +986,58 @@
       lineChart($('chToday'), { x: [], series: [], yFmt: String, empty: 'Appears once the day has readings.' }); legend($('todayLegend'), []); return;
     }
     var PB = T.predbat, keys = PB ? ['solis', 'ours', 'predbat', 'perfect', 'plain'] : ['solis', 'ours', 'perfect', 'plain'], cost = PB ? PB.costP : T.costP, upTo = PB ? PB.endMs : T.endMs;
-    var base = cost.perfect, max = Math.max.apply(null, keys.map(function (k) { return cost[k] - base; }).concat([1]));
-    keys.forEach(function (k) {
+    // A day still going shows plain money: grid power paid for so far (Solis: the real import; the others: what they would have drawn on the same solar and house use) plus the standing charge.
+    // No battery wear and no value for what is left in the battery; the battery each one holds is shown next to it instead.
+    var predSnap = false, predLate = false, plainNow = !T.past && T.gridP && T.projP, stored = null, standP = T.standingP || 0;
+    var wearSrc = T.wearP, workSrc = T.workings, gsrcAll = T.gridP;
+    // A day still going shows only Solis AI's real cost so far: grid power bought at the real rates plus the standing charge. The comparison with our software is worked out once the day has finished.
+    var solisOnly = !!plainNow; plainNow = false;
+    if (solisOnly) { PB = null; keys = ['solis']; upTo = T.endMs; cost = { solis: T.gridP.solis + standP }; stored = { solis: T.storedKwh.solis }; wearSrc = null; }
+    // "Best" means the cheapest of the real contenders: Solis AI, ours and Predbat. Perfect hindsight is a benchmark that nobody could have run, so it is shown on its own and never counts as best.
+    var cont = keys.filter(function (k) { return k === 'solis' || k === 'ours' || k === 'predbat'; }), base = Math.min.apply(null, cont.map(function (k) { return cost[k]; }));
+    var order = keys.filter(function (k) { return k !== 'perfect'; }), hasPerfect = keys.indexOf('perfect') >= 0;
+    var max = Math.max.apply(null, order.map(function (k) { return cost[k] - base; }).concat([1]));
+    var live = false;   // today shows the cost so far as of now; the projection to midnight lives under Next 24 hours
+    if (live && T.projP) {
+      var pk = ['solis', 'ours', 'plain'], best = Math.min.apply(null, pk.map(function (k) { return T.projP[k]; })), mx2 = Math.max.apply(null, pk.map(function (k) { return T.projP[k] - best; }).concat([1]));
+      pk.forEach(function (k) {
+        var row = el('div', { class: 'row' }), nm = el('div', { class: 'name' }, NAMES[k]); nm.appendChild(el('small', null, SUBS[k]));
+        var pp = T.projP.parts && T.projP.parts[k]; if (pp) nm.appendChild(el('small', { style: 'display:block' }, 'so far ' + gbp(pp.sofar) + ' · battery now ' + fmt(pp.nowKwh, 1) + ' kWh · rest of day ' + gbp(pp.rest) + ' · left at midnight ' + fmt(pp.leftKwh, 1) + ' kWh'));
+        var tr = el('div', { class: 'track' }), w = (T.projP[k] - best) / mx2 * 40, bar = el('div', { class: 'bar' });
+        bar.style.width = Math.max(0, w) + '%'; bar.style.background = C[k];
+        var val = el('div', { class: 'val' }, gbp(T.projP[k]) + (T.projP[k] - best < 0.05 ? '  (lowest)' : '  (+' + gbp(T.projP[k] - best) + ')')); val.style.left = 'calc(' + Math.max(0, w) + '% + 2px)';
+        tr.appendChild(bar); tr.appendChild(val); row.appendChild(nm); row.appendChild(tr); bars.appendChild(row);
+      });
+      bars.appendChild(el('div', { class: 'sub', style: 'margin-top:8px' }, 'Projected cost for the whole day: what each has cost so far, plus the best the forecast allows for the rest of the day from the battery level it is at now. It firms up through the day; the final figures (with perfect hindsight) appear at about 00:20.'));
+    } else if (live) {
+      bars.appendChild(el('div', { class: 'empty' }, 'The projected cost for the day appears once there is a saved forecast for the rest of it. The final comparison appears at about 00:20.'));
+    }
+    else if (solisOnly) {
+      var Lv = D.live || {};
+      bars.appendChild(el('div', { class: 'sub' }, 'Solis AI has cost so far today'));
+      bars.appendChild(el('div', { style: 'font-size:38px;font-weight:700;line-height:1.15;margin:2px 0 6px' }, gbp(cost.solis)));
+      bars.appendChild(el('div', { class: 'sub' }, 'Grid power bought ' + fmt(T.importKwh, 1) + ' kWh at the real rates, plus the standing charge of ' + gbp(standP) + '. Up to ' + hhmm(upTo) + '.'));
+      bars.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Battery now ' + fmt(stored.solis, 1) + ' kWh · solar made ' + fmt(T.pvKwh, 1) + ' kWh · house used ' + fmt(T.loadKwh, 1) + ' kWh'));
+      keys = ['solis', 'ours', 'plain', 'perfect'].filter(function (k) { return (T.paths[k === 'solis' ? 'actual' : k] || []).length; });   // the graph still shows every way of running the battery
+    }
+    else order.concat(hasPerfect ? ['perfect'] : []).forEach(function (k) {
+      if (k === 'perfect') bars.appendChild(el('div', { class: 'sub', style: 'margin:10px 0 2px' }, 'Benchmark only: the whole day known in advance, which nobody could run.'));
       var row = el('div', { class: 'row' }), nm = el('div', { class: 'name' }, NAMES[k]); nm.appendChild(el('small', null, SUBS[k]));
-      var tr = el('div', { class: 'track' }), w = (cost[k] - base) / max * 40, bar = el('div', { class: 'bar' });
+      var tr = el('div', { class: 'track' }), w = k === 'perfect' ? 0 : (order.length === 1 ? 40 : (cost[k] - base) / max * 40), bar = el('div', { class: 'bar' });
       bar.style.width = Math.max(0, w) + '%'; bar.style.background = C[k];
-      var val = el('div', { class: 'val' }, gbp(cost[k]) + (k === 'perfect' ? '  (best)' : '  (+' + gbp(cost[k] - base) + ')'));
+      if (stored && stored[k] !== undefined) nm.appendChild(el('small', { style: 'display:block' }, 'battery now ' + fmt(stored[k], 1) + ' kWh' + (wearSrc && wearSrc[k] !== undefined ? ' · wear ' + gbp(wearSrc[k]) + ' (not counted)' : '')));
+      var dlt = cost[k] - base, tag = k === 'perfect' ? '  (' + gbp(Math.abs(dlt)) + (dlt <= 0 ? ' below' : ' above') + ' the best)' : (cont.indexOf(k) >= 0 && Math.abs(dlt) < 0.05 ? '  (best)' : '  (' + (dlt < 0 ? '-' : '+') + gbp(Math.abs(dlt)) + ')');
+      var val = el('div', { class: 'val' }, gbp(cost[k]) + (solisOnly ? '' : tag));
       val.style.left = 'calc(' + Math.max(0, w) + '% + 2px)';
       tr.appendChild(bar); tr.appendChild(val); row.appendChild(nm); row.appendChild(tr); bars.appendChild(row);
     });
+    if (plainNow && workSrc) { var W = workSrc; bars.appendChild(el('div', { class: 'sub', style: 'margin-top:8px' }, 'Workings: Solis really bought ' + fmt(W.realKwh, 1) + ' kWh (' + gbp(gsrcAll.solis) + '). The model prices Solis\'s battery path at ' + gbp(W.modelP.solis) + ' (' + fmt(W.modelKwh.solis, 1) + ' kWh bought). It prices ours at ' + gbp(W.modelP.ours) + ' (' + fmt(W.modelKwh.ours, 1) + ' kWh) and plain fill at ' + gbp(W.modelP.plain) + ' (' + fmt(W.modelKwh.plain, 1) + ' kWh). Ours = Solis real + (ours - Solis path) = ' + gbp(gsrcAll.ours) + '.')); }
     var d = cost.solis - cost.ours, was = T.past ? 'that day' : 'today';
-    $('scoreNote').textContent = (T.ok ? '' : 'Provisional: readings cover ' + Math.round((T.coverage || 0) * 100) + '% of ' + was + ' and saved forecasts ' + Math.round((T.forecastCoverage || 0) * 100) + '%. ') +
-      'Figures in brackets are the extra cost over the perfect-hindsight benchmark. ' + (T.past ? 'That day: ' : 'So far today: ') + (d >= 0 ? 'ours is ' + gbp(d) + ' cheaper than Solis AI.' : 'Solis AI is ' + gbp(-d) + ' cheaper than ours.') + ' Money for grid power plus battery wear, up to ' + hhmm(upTo) + (PB ? ' (Predbat updates about once an hour, so all the bars stop at the time of its latest answer).' : '.');
-    $('todaySub').textContent = (PB ? 'Five' : 'Four') + ' ways of running ' + dayLabel(T.date) + ', on the same real solar, house use and prices.';
+    if (solisOnly) { $('scoreNote').textContent = 'The comparison with our software is worked out once the day has finished, and appears on the Results tab and here for past days. The lines on the graph are what each way of running the battery would have done so far; the dotted line is our plan from now.'; } else if (live) $('scoreNote').textContent = ''; else $('scoreNote').textContent = (T.ok ? '' : 'Provisional: readings cover ' + Math.round((T.coverage || 0) * 100) + '% of ' + was + ' and saved forecasts ' + Math.round((T.forecastCoverage || 0) * 100) + '%. ') +
+      'Figures in brackets are the cost against the cheapest of ' + (PB ? 'Solis AI, ours and Predbat' : 'Solis AI and ours') + ', not against perfect hindsight (shown separately as a benchmark). ' + (T.past ? 'That day: ' : 'So far today: ') + (d >= 0 ? 'ours is ' + gbp(d) + ' cheaper than Solis AI.' : 'Solis AI is ' + gbp(-d) + ' cheaper than ours.') + (plainNow ? (predSnap ? ' Every run is cut at ' + hhmm(upTo) + ', the time of Predbat\'s latest answer (it reports about once an hour), so they all cover the same period.' : '') + ' Solis AI is the real grid cost up to ' + hhmm(upTo) + ' plus today\'s standing charge of ' + gbp(standP) + '. Ours and Predbat are that same real figure adjusted for the battery level each one reached: more stored means more grid energy at the rate it was charged, less means less, and any import not for the battery comes from the model. Where the battery levels match, the costs match. Wear is not counted.' : ' Money paid for grid power, up to ' + hhmm(upTo)) + (PB ? ' (Predbat updates about once an hour, so all the bars stop at the time of its latest answer).' : '.');
+    var why = $('dayWhy'); clear(why); why.hidden = true;
+    if (T.past && !solisOnly) { try { var ex = explainDay(T, cost, stored); if (ex.length) { why.hidden = false; why.appendChild(el('b', null, 'Why the difference')); ex.forEach(function (s) { why.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, s)); }); } } catch (e) { /* explanation is optional */ } }
+    $('todaySub').textContent = live ? 'Battery level so far today for each way of running it. Costs are compared once the day is finished.' : (solisOnly ? 'The real cost so far, and how each way of running the battery compares on the graph.' : (PB ? 'Five' : 'Four') + ' ways of running ' + dayLabel(T.date) + ', on the same real solar, house use and prices.') + (plainNow ? ' Costs are as at ' + hhmm(upTo) + (predSnap ? ', the time of Predbat\'s latest answer (the slowest source): every run is worked out up to that same moment.' : ', the latest half hour.') : '');
     var n = 49, xl = [], i; for (i = 0; i < n; i++) xl.push(hhmm(T.startMs + i * 1800e3));
     var ser = keys.map(function (k) { var p = k === 'predbat' ? PB.pathPct : (T.paths[k === 'solis' ? 'actual' : k] || []); var v = []; for (i = 0; i < n; i++) v.push(p[i] === undefined ? null : p[i]); return { name: NAMES[k].replace(/ \(.*\)/, ''), color: C[k], values: v }; });
     legend($('todayLegend'), ser);
@@ -1022,7 +1125,7 @@
       tip: function (i) { return [{ name: 'Net cost', color: 'var(--solis)', value: cb[i] === null ? '–' : fmt(cb[i], 1) + 'p' }]; } });
     var cheap = pad(P.cheap).map(function (v) { return !!v; });
     lineChart($('chDayPow'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'House used', color: 'var(--solis)', values: pad(P.loadKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 240, label: 'Solar made and house used through the day' });
-    lineChart($('chAccPv'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 220, label: 'Solar made against the forecast' }); (function () { var a = 0, f = 0, nn = 0; for (var q = 0; q < P.pvKw.length; q++) { if (P.pvKw[q] === null || P.pvFcKw[q] === null || P.pvFcKw[q] === undefined) continue; a += P.pvKw[q] * 0.5; f += P.pvFcKw[q] * 0.5; nn++; } $('accDay').textContent = dayLabel(P.date) + (nn ? ': forecast ' + fmt(f, 1) + ' kWh, actual ' + fmt(a, 1) + ' kWh' + (f > 0.2 ? ' (' + Math.abs(Math.round((a - f) / f * 100)) + '% ' + (a >= f ? 'more' : 'less') + ' than forecast)' : '') : ''); })();
+    lineChart($('chAccPv'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 220, label: 'Solar made against the forecast' }); (function () { var a = 0, f = 0, nn = 0; for (var q = 0; q < P.pvKw.length; q++) { if (P.pvKw[q] === null || P.pvFcKw[q] === null || P.pvFcKw[q] === undefined) continue; a += P.pvKw[q] * 0.5; f += P.pvFcKw[q] * 0.5; nn++; } var ff = 0; for (var q2 = 0; q2 < P.pvFcKw.length; q2++) if (P.pvFcKw[q2]) ff += P.pvFcKw[q2] * 0.5; $('accDay').textContent = dayLabel(P.date) + (nn ? ': forecast ' + fmt(f, 1) + ' kWh, actual ' + fmt(a, 1) + ' kWh' + (f > 0.2 ? ' (' + Math.abs(Math.round((a - f) / f * 100)) + '% ' + (a >= f ? 'more' : 'less') + ' than forecast)' : '') : '') + (!P.fullDay && ff > f + 0.05 ? '. Whole day forecast: ' + fmt(ff, 1) + ' kWh' : ''); })();
     lineChart($('chDayPrice'), { x: x, series: [{ name: 'Pay per unit', color: 'var(--plain)', values: pad(P.impP) }, { name: 'Paid for export', color: 'var(--perfect)', values: pad(P.expP) }], yMin: 0, shade: cheap, yFmt: function (v) { return fmt(v, 1) + 'p'; }, xTickIdx: tk, h: 180, label: 'Import and export price' });
     var imp = pad(P.importKwh), exp = pad(P.exportKwh), ch = pad(P.chargeKwh), dis = pad(P.dischargeKwh);
     var net = imp.map(function (v, i) { return v === null ? null : v - (exp[i] || 0); });
@@ -1040,7 +1143,24 @@
     table($('tblDay'), ['From', 'Solar kWh', 'House kWh', 'Bought kWh', 'Sold kWh', 'Battery at start', 'Pay per unit'], rows);
   }
 
+  function renderProj() {
+    var c = $('projCard'); if (!c) return; clear(c); c.hidden = true; return;   // the Next 24 hours tab shows only the current plan; costs are compared once a day has finished
+    var P = D && D.today && !D.today.error && D.today.projP; if (!P) { c.hidden = true; return; }
+    c.hidden = false; c.appendChild(el('h2', { style: 'font-size:14px' }, 'Projected cost for the whole of today'));
+    c.appendChild(el('div', { class: 'sub' }, 'What each way of running today has cost so far, plus the best the forecast allows for the rest of the day from the battery level it is at now. A prediction: it moves with the forecast and settles when the day finishes.'));
+    var bars = el('div', { class: 'bars' }); c.appendChild(bars);
+    var pk = ['solis', 'ours', 'plain'], best = Math.min.apply(null, pk.map(function (k) { return P[k]; })), mx2 = Math.max.apply(null, pk.map(function (k) { return P[k] - best; }).concat([1]));
+    pk.forEach(function (k) {
+      var row = el('div', { class: 'row' }), nm = el('div', { class: 'name' }, NAMES[k]); nm.appendChild(el('small', null, SUBS[k]));
+      var pp = P.parts && P.parts[k]; if (pp) nm.appendChild(el('small', { style: 'display:block' }, 'so far ' + gbp(pp.sofar) + ' · battery now ' + fmt(pp.nowKwh, 1) + ' kWh · rest of day ' + gbp(pp.rest) + ' · left at midnight ' + fmt(pp.leftKwh, 1) + ' kWh'));
+      var tr = el('div', { class: 'track' }), w = (P[k] - best) / mx2 * 40, bar = el('div', { class: 'bar' });
+      bar.style.width = Math.max(0, w) + '%'; bar.style.background = C[k];
+      var val = el('div', { class: 'val' }, gbp(P[k]) + (P[k] - best < 0.05 ? '  (lowest)' : '  (+' + gbp(P[k] - best) + ')')); val.style.left = 'calc(' + Math.max(0, w) + '% + 2px)';
+      tr.appendChild(bar); tr.appendChild(val); row.appendChild(nm); row.appendChild(tr); bars.appendChild(row);
+    });
+  }
   function renderPlan() {
+    try { renderProj(); } catch (eP) { /* the projection card is optional */ }
     var P = D.plan || [];
     if (!P.length) { ['chPlanSoc', 'chPlanPow', 'chPrice'].forEach(function (id) { clear($(id)); $(id).appendChild(el('div', { class: 'empty' }, 'The first plan appears after the first reading.')); }); return; }
     var Q = P.slice(0, 48), x = Q.map(function (r) { return hhmm(r.t); }), tickIdx = [0, 8, 16, 24, 32, 40];
@@ -1085,7 +1205,11 @@
 
   var logBench = 'cap'; try { logBench = localStorage.getItem('logBench') || 'cap'; } catch (e) { logBench = 'cap'; }
   function renderLog() {
-    var BENCH = [{ key: 'cap', f: 'cap_bill_p', name: 'Ofgem price cap', note: 'the house\'s own use bought at the Ofgem cap (26.32p a unit, 54.83p a day; no VAT until March 2027), no solar or battery' },
+    var BENCH = [{ key: 'ours', f: 'ours_bill_p', name: 'Our plan (replayed)', note: 'our planner run on the same day with the forecasts it had at the time, starting from the real battery level at midnight, plus the standing charge' },
+      { key: 'predbat', f: 'predbat_bill_p', name: 'Predbat (replayed)', note: 'Predbat run on the same day, plus the standing charge' },
+      { key: 'plain', f: 'plain_bill_p', name: 'Plain self-use', note: 'battery charged only by solar, no cheap-rate charging' },
+      { key: 'perfect', f: 'perfect_bill_p', name: 'Perfect hindsight (benchmark)', note: 'the best that could have been done knowing the day in advance; not a fair target' },
+{ key: 'cap', f: 'cap_bill_p', name: 'Ofgem price cap', note: 'the house\'s own use bought at the Ofgem cap (26.32p a unit, 54.83p a day; no VAT until March 2027), no solar or battery' },
       { key: 'fixed', f: 'fixed_bill_p', name: 'Best fixed rate', note: D.fixedLabel ? 'the house\'s own use at ' + D.fixedLabel : 'not set: add a rate in Setup under "Daily log comparison"' },
       { key: 'nosolar', f: 'nosolar_bill_p', name: 'Same tariff, no solar or battery', note: 'the house\'s own use bought from the grid at the same tariff that day, with no solar and no battery. Only days our own readings cover' }];
     var rows = (D.log || []).filter(function (r) { return r.actual_bill_p !== null; }), t = $('tblLog'); clear(t);
@@ -1358,7 +1482,7 @@
   }
   $('tfScan').addEventListener('click', function () {
     var b = $('tfScan'); b.disabled = true; $('tfMsg').textContent = 'Starting the scan…'; var tok = ++tfPoll, t0 = Date.now(); window.__force = true;
-    gs('tariffScanStart', [], function (s) { tfWatch(tok, t0); }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan failed: ' + e; });
+    gs('tariffScanStart', [], function (s) { if (s && s.state === 'fresh') { b.disabled = false; $('tfMsg').textContent = 'Already up to date: prices and your usage have not changed since the last scan.'; loadTf(); return; } tfWatch(tok, t0); }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan failed: ' + e; });
   });
   function pounds(p, sign) { var v = Math.abs(p) / 100; return (sign ? (p > 0 ? '+' : p < 0 ? '-' : '') : (p < 0 ? '-' : '')) + '£' + v.toFixed(2); }
   var TFMODE = 'own';
@@ -1741,7 +1865,7 @@
     $('tariff').textContent = d.tariff || '–';
     $('fresh').textContent = d.live ? (window.matchMedia && matchMedia('(max-width:470px)').matches ? '' : 'Updated ') + ago(d.live.ageMin) : 'No readings yet';
     $('exportState').textContent = d.exportEnabled ? 'on' : 'off';
-    renderHero(); renderKpis(); renderToday(); if (!dayPack || !selDate) { if (!window.__noDay) loadDay(selDate); } else renderDay(); renderPlan(); renderHistory(); renderLog(); renderForecast(); renderQuality(); renderLearn();
+    renderHero(); try { renderLongRun(); } catch (eL) { /* the long run card must never stop the page */ } renderKpis(); renderToday(); if (!dayPack || !selDate) { if (!window.__noDay) loadDay(selDate); } else renderDay(); renderPlan(); renderHistory(); renderLog(); renderForecast(); renderQuality(); renderLearn();
     $('foot').textContent = 'Generated ' + new Intl.DateTimeFormat('en-GB', { timeZone: TZ, dateStyle: 'medium', timeStyle: 'short' }).format(new Date(d.generated)) + '. Refreshes every 5 minutes.';
   }
   // loading bar: counts requests to the server that the person is waiting on (background prefetching is quiet)
@@ -1964,14 +2088,14 @@
     done.forEach(function (x) { sa += x.actual; sf += x.forecast; });
     var p = pct(sa, sf);
     $('accSum').textContent = done.length ? 'Over the last ' + done.length + ' finished day' + (done.length === 1 ? '' : 's') + ' the forecast said ' + sf.toFixed(1) + ' kWh and the panels made ' + sa.toFixed(1) + ' kWh' + (p === null ? '.' : ': ' + Math.abs(p) + '% ' + (p >= 0 ? 'more' : 'less') + ' than forecast on the whole.') + ' The forecast is the one made beforehand, not a later correction.' : 'Only today so far. A finished day will appear tomorrow.';
-    var mx = Math.max.apply(null, days.map(function (x) { return Math.max(x.actual, x.forecast); })) || 1;
+    var mx = Math.max.apply(null, days.map(function (x) { return Math.max(x.actual, x.forecast, x.forecastDay || 0); })) || 1;
     days.slice().reverse().forEach(function (x) {
       var pc = pct(x.actual, x.forecast), row = document.createElement('div'); row.style.cssText = 'display:grid;grid-template-columns:84px 1fr 120px;gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--grid);font-size:13.5px';
       var d = new Date(x.date + 'T12:00:00Z'), nm = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
       var l = document.createElement('div'); l.textContent = nm + (x.partial ? ' (so far)' : '');
       var bars = document.createElement('div');
-      [['forecast', 'var(--axis)', x.forecast], ['actual', 'var(--ours)', x.actual]].forEach(function (b) { var bb = document.createElement('div'); bb.style.cssText = 'height:7px;border-radius:4px;margin:2px 0;width:' + Math.max(2, b[2] / mx * 100) + '%;background:' + b[1]; bb.title = b[0] + ' ' + b[2].toFixed(1) + ' kWh'; bars.appendChild(bb); });
-      var t = document.createElement('div'); t.style.cssText = 'text-align:right'; t.innerHTML = '<b>' + x.actual.toFixed(1) + '</b> of ' + x.forecast.toFixed(1) + ' kWh' + (pc === null ? '' : '<div class="sub" style="font-size:12px">' + Math.abs(pc) + '% ' + (pc >= 0 ? 'more' : 'less') + '</div>');
+      [['forecast', 'var(--axis)', x.partial && x.forecastDay !== undefined ? x.forecastDay : x.forecast], ['actual', 'var(--ours)', x.actual]].forEach(function (b) { var bb = document.createElement('div'); bb.style.cssText = 'height:7px;border-radius:4px;margin:2px 0;width:' + Math.max(2, b[2] / mx * 100) + '%;background:' + b[1]; bb.title = b[0] + ' ' + b[2].toFixed(1) + ' kWh'; bars.appendChild(bb); });
+      var t = document.createElement('div'); t.style.cssText = 'text-align:right'; t.innerHTML = '<b>' + x.actual.toFixed(1) + '</b> of ' + (x.partial && x.forecastDay !== undefined ? x.forecastDay : x.forecast).toFixed(1) + ' kWh' + (x.partial ? '<div class="sub" style="font-size:12px">forecast for the whole day</div>' : '') + (pc === null || x.partial ? '' : '<div class="sub" style="font-size:12px">' + Math.abs(pc) + '% ' + (pc >= 0 ? 'more' : 'less') + '</div>');
       row.appendChild(l); row.appendChild(bars); row.appendChild(t); box.appendChild(row);
     });
     var key = document.createElement('div'); key.className = 'sub'; key.style.marginTop = '6px'; key.textContent = 'Grey bar = forecast, orange = what the panels made. Same half hours only, so a part day is fair.'; box.appendChild(key);
@@ -1979,6 +2103,87 @@
   function load() { if (!window.__gs) return setTimeout(load, 800); window.__gs('getSolarAccuracy', [(window.__ACCESS__ || {}).key || ''], render, function (e) { var s = $('accSum'); if (s) s.textContent = 'Could not load: ' + e; }); }
   document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.seg button'); if (b && /accurate/i.test(b.textContent)) load(); });
   setTimeout(load, 1500);
+})();
+</script>
+
+<script>
+/* Base load: learned from every finished day */
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function tile(h, big, sub) { var c = document.createElement('div'); c.className = 'card'; var a = document.createElement('div'); a.className = 'sub'; a.textContent = h; var b = document.createElement('div'); b.className = 'num'; b.style.cssText = 'font-size:28px;font-weight:650'; b.textContent = big; var s = document.createElement('div'); s.className = 'sub'; s.textContent = sub; c.appendChild(a); c.appendChild(b); c.appendChild(s); return c; }
+  function render(r) {
+    var sum = $('blSum'), card = $('blCard'); if (!sum || !card) return;
+    if (!r || !r.days) { sum.textContent = 'Learning: needs a finished day with readings.'; card.hidden = true; return; }
+    sum.textContent = 'Learned from ' + r.days + ' finished day' + (r.days === 1 ? '' : 's') + ' (' + r.from + ' to ' + r.to + '). Each day\'s night load is the average of its half hours from midnight to 06:00 with the spikes taken out (' + r.skippedHalfHours + ' half hour' + (r.skippedHalfHours === 1 ? '' : 's') + ' left out' + (r.oddDays ? ', and ' + r.oddDays + ' unusual day' + (r.oddDays === 1 ? '' : 's') : '') + '); the figure is the average of those days.';
+    card.hidden = false; var n = $('blNums'); n.textContent = '';
+    n.appendChild(tile('Night base load', r.baseKw.toFixed(2) + ' kW', 'Typical day ' + r.lowKw.toFixed(2) + ' to ' + r.highKw.toFixed(2) + ' kW'));
+    n.appendChild(tile('Ticking over', r.baseKwhDay.toFixed(1) + ' kWh a day', (r.sharePct === null ? '' : r.sharePct + '% of ') + 'the ' + r.avgKwhDay.toFixed(1) + ' kWh a day the house uses'));
+    var bars = $('blBars'); bars.textContent = ''; var mx = Math.max.apply(null, r.profile.filter(function (v) { return v !== null; }).concat([r.baseKw, 0.5]));
+    r.profile.forEach(function (v, i) { var b = document.createElement('div'); b.style.cssText = 'flex:1;border-radius:2px 2px 0 0;background:var(--ours);opacity:.85;height:' + (v === null ? 0 : Math.max(2, v / mx * 100)) + '%'; b.title = (i < 20 ? '0' : '') + Math.floor(i / 2) + ':' + (i % 2 ? '30' : '00') + '  ' + (v === null ? 'no data' : v.toFixed(2) + ' kW'); bars.appendChild(b); });
+    var ln = document.createElement('div'); ln.style.cssText = 'position:absolute;left:0;right:0;border-top:2px dashed var(--axis);bottom:' + (r.baseKw / mx * 100) + '%;pointer-events:none'; bars.appendChild(ln);
+  }
+  function load() { if (!window.__gs) return setTimeout(load, 800); window.__gs('getBaseLoad', [(window.__ACCESS__ || {}).key || ''], render, function (e) { var s = $('blSum'); if (s) s.textContent = 'Could not load: ' + e; }); }
+  setTimeout(load, 2000);
+})();
+</script>
+
+<script>
+/* Number checks (Setup): cross-checks of the saved figures */
+(function () {
+  function build() {
+    var v = document.getElementById('viewSetup'); if (!v || document.getElementById('auditCard')) return !!document.getElementById('auditCard');
+    var c = document.createElement('section'); c.className = 'card'; c.id = 'auditCard'; c.style.marginTop = '14px';
+    var h = document.createElement('h2'); h.textContent = 'Number checks'; c.appendChild(h);
+    var s = document.createElement('div'); s.className = 'sub'; s.textContent = 'Cross-checks the saved figures against each other and the Octopus meter.'; c.appendChild(s);
+    var b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Run number checks'; b.style.margin = '8px 0'; c.appendChild(b);
+    var box = document.createElement('div'); c.appendChild(box); v.appendChild(c);
+    b.onclick = function () { box.textContent = 'Checking…'; if (!window.__gs) { box.textContent = 'Not ready, try again.'; return; }
+      window.__gs('getAuditChecks', [(window.__ACCESS__ || {}).key || ''], function (r) { box.textContent = '';
+        (r.checks || []).forEach(function (x) { var row = document.createElement('div'); row.style.cssText = 'display:grid;grid-template-columns:24px 1fr;gap:8px;padding:6px 0;border-top:1px solid var(--grid)'; var i = document.createElement('span'); i.textContent = x.ok ? '✅' : '⚠️'; var t = document.createElement('div'); var n = document.createElement('b'); n.textContent = x.name; var dd = document.createElement('div'); dd.className = 'sub'; dd.textContent = x.detail; t.appendChild(n); t.appendChild(dd); row.appendChild(i); row.appendChild(t); box.appendChild(row); }); },
+        function (e) { box.textContent = 'Could not run: ' + e; }); };
+    return true;
+  }
+  var n = 0, iv = setInterval(function () { if (build() || ++n > 40) clearInterval(iv); }, 500);
+})();
+</script>
+
+<script>
+/* Connection check (Setup): is each outside source working? */
+(function () {
+  function build() {
+    var v = document.getElementById('viewSetup'); if (!v) return false; if (document.getElementById('healthCard')) return true;
+    var c = document.createElement('section'); c.className = 'card'; c.id = 'healthCard'; c.style.marginTop = '14px';
+    var h = document.createElement('h2'); h.textContent = 'Is it working?'; c.appendChild(h);
+    var s = document.createElement('div'); s.className = 'sub'; s.textContent = 'Checks each outside source (weather, GitHub copies, Solis, the tariff comparison, the scheduled jobs) and says how fresh each one is.'; c.appendChild(s);
+    var b = document.createElement('button'); b.className = 'btn'; b.textContent = 'Check connections'; b.style.margin = '8px 0'; c.appendChild(b);
+    var box = document.createElement('div'); c.appendChild(box); v.insertBefore(c, v.firstChild.nextSibling || null);
+    function run() { box.textContent = 'Checking…'; if (!window.__gs) { box.textContent = 'Not ready, try again.'; return; }
+      window.__gs('getHealth', [(window.__ACCESS__ || {}).key || ''], function (r) { box.textContent = '';
+        (r.items || []).forEach(function (x) { var row = document.createElement('div'); row.style.cssText = 'display:grid;grid-template-columns:24px 1fr;gap:8px;padding:6px 0;border-top:1px solid var(--grid)'; var i = document.createElement('span'); i.textContent = x.ok ? '✅' : '⚠️'; var t = document.createElement('div'); var n = document.createElement('b'); n.textContent = x.name; var dd = document.createElement('div'); dd.className = 'sub'; dd.textContent = x.detail; t.appendChild(n); t.appendChild(dd); row.appendChild(i); row.appendChild(t); box.appendChild(row); }); },
+        function (e) { box.textContent = 'Could not run: ' + e; }); }
+    b.onclick = run; return true;
+  }
+  var n = 0, iv = setInterval(function () { if (build() || ++n > 40) clearInterval(iv); }, 500);
+})();
+
+/* System losses: learned from the energy books of every finished day */
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function tile(h, big, sub) { var c = document.createElement('div'); c.className = 'card'; var a = document.createElement('div'); a.className = 'sub'; a.textContent = h; var b = document.createElement('div'); b.className = 'num'; b.style.cssText = 'font-size:22px;font-weight:700'; b.textContent = big; var s = document.createElement('div'); s.className = 'sub'; s.textContent = sub; c.appendChild(a); c.appendChild(b); c.appendChild(s); return c; }
+  function render(r) {
+    var sum = $('slSum'), card = $('slCard'); if (!sum || !card) return;
+    var f = r && r.fit;
+    if (!f) { sum.textContent = 'Learning: needs about five finished days with battery readings.'; card.hidden = true; return; }
+    sum.textContent = 'Learned from ' + f.days + ' finished days (' + f.from + ' to ' + f.to + '). The energy that comes in (grid and solar) is compared with what the house used and what the battery gained; what is left is lost.';
+    card.hidden = false; var n = $('slNums'); n.textContent = '';
+    n.appendChild(tile('Lost each day', f.avgLossKwhDay.toFixed(1) + ' kWh', 'Typical day, off the energy books'));
+    n.appendChild(tile('Efficiency in and out', (f.eta * 100).toFixed(1) + '%', 'each way through the inverter and battery (the model used to assume 95%)'));
+    n.appendChild(tile('Lost per kWh moved', (f.lossPerKwh * 100).toFixed(1) + '%', 'of everything charged and discharged; no flat standby is added to any cost'));
+    n.appendChild(tile('Usable battery', f.capKwh.toFixed(1) + ' kWh', (f.capFrom === 'measured' ? 'measured from the battery counters' : 'nominal; not enough big swings to measure') + ' (' + r.nominalCapKwh + ' kWh on the label)'));
+    $('slNote').textContent = (r.inUse ? 'These figures are in use: the simulated runs and the plans carry the same losses, so they are judged on the real machine. ' : 'These figures are not applied yet (they are saved within a few hours of a finished day). ') + 'Fit error about ' + f.residKwhDay.toFixed(2) + ' kWh a day.';
+  }
+  function load() { if (!window.__gs) return setTimeout(load, 800); window.__gs('getSystemLosses', [(window.__ACCESS__ || {}).key || ''], render, function (e) { var s = $('slSum'); if (s) s.textContent = 'Could not load: ' + e; }); }
+  setTimeout(load, 2500);
 })();
 </script>
 
