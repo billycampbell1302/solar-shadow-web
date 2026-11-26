@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'b028baeebe', u = new URL(location.href);
+    var id = '29cb73700d', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1517,6 +1517,7 @@
     // what the scan is based on
     var c3 = el('div', { class: 'card tfcard', style: 'margin-top:10px' }); c3.appendChild(tfHead('🔎', 'What this is based on'));
     c3.appendChild(el('div', null, U.days + ' full days of Dad\'s gas meter (' + U.from + ' to ' + U.to + '): ' + fmt(U.kwh, 0) + ' kWh, about ' + fmt(U.perDay, 1) + ' kWh a day. A normal year at this weather link comes to about ' + fmt(U.annualKwh, 0) + ' kWh.'));
+    c3.appendChild(el('div', { style: 'margin-top:6px' }, U.basis === 'history' ? 'Monthly figures are the meter\'s own history for the last 12 months.' : U.basis === 'history+estimate' ? 'Monthly figures use the meter\'s own history for ' + U.realMonths + ' months, and the weather estimate (scaled to match) for the rest.' : 'The meter has no monthly history yet, so the figures are estimated from the recent days and the weather.'));
     if (U.weather) c3.appendChild(el('div', { style: 'margin-top:6px' }, 'Weather link learned: about ' + fmt(U.weather.baseKwhDay, 1) + ' kWh a day all year (hot water, cooking) plus ' + fmt(U.weather.perHdd, 2) + ' kWh for every degree-day of cold (fit ' + Math.round(U.weather.r2 * 100) + '%), so winter uses far more than summer.'));
     else c3.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, 'The readings do not yet cover enough different temperatures to learn the weather link, so a typical UK winter-against-summer shape is used.'));
     if (U.monthKwh) { var mn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], mt = el('div', { class: 'sub', style: 'margin-top:6px;display:flex;gap:10px;flex-wrap:wrap' }); U.monthKwh.forEach(function (v, i) { mt.appendChild(el('span', null, mn[i] + ' ' + fmt(v, 0) + ' kWh')); }); c3.appendChild(mt); }
