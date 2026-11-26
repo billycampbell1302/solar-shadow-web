@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '83dedd065e', u = new URL(location.href);
+    var id = '81d84695d0', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1312,7 +1312,7 @@
         if (fresh && !window.__force) return; // a finished day we fetched in the last 10 minutes: no need to ask the server again
         var ok0 = ok, bad0 = bad;
         ok = function (r) { try { localStorage.setItem(ck, JSON.stringify({ t: Date.now(), r: r })); } catch (e) {} ok0(r); };
-        bad = function (m) { if (shown) return; bad0(m); };
+        bad = function (m) { if (shown) { if (fn === 'getTariffs') { var tm = $('tfMsg'); if (tm) tm.textContent = 'Showing the copy saved on this phone. The latest could not be loaded: ' + m; } return; } bad0(m); };
       }
       // static phone site: same calls over HTTPS (text/plain keeps it a simple request, so no CORS preflight)
       var done = false, tries = 0, to = setTimeout(function () { if (!done) { done = true; bad('Timed out. Check your connection and pull down to refresh.'); } }, 90000);
