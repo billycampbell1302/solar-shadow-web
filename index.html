@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'b426d5680f', u = new URL(location.href);
+    var id = '48d8dafc80', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -717,6 +717,7 @@
   </div>
 
   <div id="viewSetup" hidden>
+    <section><h2>Appearance</h2><div class="sub">Light or dark. Automatic follows the phone.</div><div class="card" style="margin-top:10px"><button class="btn" type="button" id="themeBtn">Appearance</button></div></section>
     <section>
       <h2>Setup</h2>
       <div class="sub">Everything needed to get going, in one place. Keys are stored privately in this Google project and are never shown again, in the page or in any message.</div>
@@ -753,9 +754,9 @@
   <button data-t="log" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg>Daily log</button>
   <button data-t="tf" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>Tariffs</button>
   <button data-t="car" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>Cars</button>
-  <button data-t="more" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>More</button>
+  <button data-t="act" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>System health</button>
 </nav>
-<div class="sheet" id="moreSheet" hidden><button data-t="act">Activity</button><button data-t="sh">Summerhouse</button><button data-t="setup">Setup</button><button id="themeBtn" type="button">Appearance</button></div>
+<div class="sheet" id="moreSheet" hidden></div>
 <div class="stbar" aria-hidden="true"></div>
 <div class="busy" id="busy" aria-hidden="true"></div>
 <div class="ptr" id="ptr">Pull down to refresh</div>
@@ -1453,7 +1454,7 @@
   $('linkDrop').addEventListener('click', function () { gs('removeViewLink', [], function () { linkBox('Link removed. Nobody else can open the app now.'); }, function (e) { linkBox('Could not remove it: ' + e); }); });
   var curTab = 'dash', actTimer = null, VIEWS = { dash: ['viewDash', 'tabDash'], log: ['viewLog', 'tabLog'], act: ['viewAct', 'tabAct'], br: ['viewBr', 'tabBr'], tf: ['viewTf', 'tabTf'], car: ['viewCar', 'tabCar'], sh: ['viewSh', 'tabSh'], setup: ['viewSetup', 'tabSetup'] };
   function showTab(which) {
-    curTab = which; var mainT = { dash: 1, log: 1, tf: 1, car: 1 }; Array.prototype.forEach.call(document.querySelectorAll('#botbar button'), function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-t') === (mainT[which] ? which : 'more'))); }); $('moreSheet').hidden = true;
+    curTab = which; var mainT = { dash: 1, log: 1, tf: 1, car: 1, sh: 1, act: 1 }; Array.prototype.forEach.call(document.querySelectorAll('#botbar button'), function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-t') === (mainT[which] ? which : ''))); }); $('moreSheet').hidden = true;
     Object.keys(VIEWS).forEach(function (k) { $(VIEWS[k][0]).hidden = k !== which; $(VIEWS[k][1]).setAttribute('aria-selected', String(k === which)); });
     if (actTimer) { clearInterval(actTimer); actTimer = null; }
     if (which === 'setup') gs('getSetup', [], renderSetup, function (e) { $('setupStatus').textContent = 'Could not load setup: ' + e; });
@@ -2106,7 +2107,7 @@
   var bl = bar.querySelector('button[data-t="log"]'), bt = bar.querySelector('button[data-t="tf"]');
   if (bl) set(bl, 'log', 'Results', icons.money);
   if (bt) { var shB = bt.cloneNode(true); set(shB, 'sh', 'Summerhouse', icons.sh); shB.setAttribute('aria-selected', 'false'); shB.addEventListener('click', function () { var m = $('moreSheet'); if (m) m.hidden = true; var t = $('tabSh'); if (t) t.click(); window.scrollTo(0, 0); }); bt.parentNode.insertBefore(shB, bt.nextSibling); }
-  var order = ['dash', 'log', 'tf', 'car', 'sh', 'more'];
+  var order = ['dash', 'log', 'tf', 'car', 'sh', 'act'];
   order.forEach(function (t) { var b = bar.querySelector('button[data-t="' + t + '"]'); if (b) bar.appendChild(b); });
   var sheet = $('moreSheet'); if (sheet) { var s = sheet.querySelector('button[data-t="sh"]'); if (s) s.remove(); }
   // Money: Daily results and Tariffs together
@@ -2119,9 +2120,9 @@
   }
   var vl = $('viewLog'), vt = $('viewTf');
   // keep the bottom bar's highlight in step with whichever page is showing
-  var group = { tabDash: 'dash', tabLog: 'log', tabTf: 'tf', tabCar: 'car', tabSh: 'sh' };
+  var group = { tabDash: 'dash', tabLog: 'log', tabTf: 'tf', tabCar: 'car', tabSh: 'sh', tabAct: 'act' };
   function sync() {
-    var cur = document.querySelector('nav.tabs button[aria-selected="true"]'), g = cur ? (group[cur.id] || 'more') : 'dash';
+    var cur = document.querySelector('nav.tabs button[aria-selected="true"]'), g = cur ? (group[cur.id] || '') : 'dash';
     Array.prototype.forEach.call(bar.querySelectorAll('button'), function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-t') === g)); });
   }
   var mo = new MutationObserver(sync); Array.prototype.forEach.call(document.querySelectorAll('nav.tabs button'), function (b) { mo.observe(b, { attributes: true, attributeFilter: ['aria-selected'] }); });
@@ -2145,7 +2146,7 @@
 <script>
 /* Look v3: emoji icons on the bottom bar and More menu, as in the home heating app */
 (function () {
-  var em = { dash: '☀️', log: '💷', tf: '🏷️', car: '🚗', sh: '🏡', more: '⋯' };
+  var em = { dash: '☀️', log: '💷', tf: '🏷️', car: '🚗', sh: '🏡', act: '📋' };
   function paint() {
     var bar = document.getElementById('botbar'); if (!bar) return;
     Array.prototype.forEach.call(bar.querySelectorAll('button'), function (b) {
