@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '48d8dafc80', u = new URL(location.href);
+    var id = '6ddd483c9f', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -783,7 +783,7 @@
   function ago(min) { return min < 1 ? 'just now' : min < 90 ? Math.round(min) + ' min ago' : Math.round(min / 60) + ' h ago'; }
 
   // ---------------------------------------------------------------- tooltip
-  if (!ACC.owner) { $('tabSetup').hidden = true; }
+  if (!ACC.owner) { $('tabSetup').hidden = true; if ($('cogBtn')) $('cogBtn').hidden = true; var tb = $('themeBtn'), pl = document.querySelector('.pills'); if (tb && pl) { tb.className = 'modebtn'; pl.appendChild(tb); } }   // Dad's link: every tab except Settings; the light/dark button moves up beside the page controls
   var tip = el('div', { class: 'tip', role: 'status' });
   document.body.appendChild(tip);
   function showTip(host, x, title, rows) {
@@ -2043,7 +2043,7 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); }, acc = window.__ACCESS__ || { owner: true };
   var mode = ''; try { mode = localStorage.getItem('viewMode') || ''; } catch (e) {}
-  if (mode !== 'simple' && mode !== 'full') mode = acc.owner ? 'full' : 'simple';
+  if (mode !== 'simple' && mode !== 'full') mode = 'full';
   // names: what each page is for, in plain words
   var names = { tabDash: 'Overview', tabLog: 'Daily results', tabTf: 'Tariffs', tabCar: 'Cars', tabSh: 'Summerhouse', tabAct: 'System health', tabBr: 'How it works', tabSetup: 'Settings' };
   Object.keys(names).forEach(function (id) { if ($(id)) $(id).textContent = names[id]; });
