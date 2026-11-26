@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '94cae4e93c', u = new URL(location.href);
+    var id = '41cdf954cf', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1487,11 +1487,12 @@
     card.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Meter readings taken as ' + (U.unit === 'm3' ? 'cubic metres (converted to kWh)' : 'kWh') + '. If the kWh a day looks wrong, set the units in Setup. Gas price rises nobody has announced yet are not forecast.'));
     o.appendChild(card);
     var cur = G.current;
-    if (cur) { var cc = el('div', { class: 'card', style: 'margin-top:10px' }); cc.appendChild(el('div', { class: 'sub' }, 'Dad\'s deal now')); cc.appendChild(el('b', null, cur.name)); cc.appendChild(el('div', null, fmt(cur.unitP, 2) + 'p a kWh, ' + fmt(cur.standingP, 1) + 'p a day. About ' + pounds(cur.costP) + ' over the next 12 months.')); o.appendChild(cc); }
+    if (cur) { var cc = el('div', { class: 'card', style: 'margin-top:10px' }); cc.appendChild(el('div', { class: 'sub' }, 'Dad\'s deal now')); cc.appendChild(el('b', null, cur.name)); cc.appendChild(el('div', null, fmt(cur.unitP, 2) + 'p a kWh, ' + fmt(cur.standingP, 1) + 'p a day. About ' + pounds(cur.costP) + ' over the next 12 months.')); if (cur.endMs) cc.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, (cur.variable ? 'Variable deal.' : 'Fixed') + ' ' + (cur.endMs > Date.now() ? 'Ends ' + new Date(cur.endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + (cur.exitNowP ? '. Leaving before then costs a ' + pounds(cur.exitNowP) + ' exit fee; it is included in "Against now" below.' : '.') : 'It has ended.'))); o.appendChild(cc); }
     var only = $('tfOnlyOk') ? $('tfOnlyOk').checked : true, deals = (G.deals || []).filter(function (d) { return !only || !d.blocked; });
     var t = el('table'), hd = el('tr'); ['Deal', 'Next 12 months', 'Against now', 'Unit', 'Standing'].forEach(function (x) { hd.appendChild(el('th', null, x)); }); t.appendChild(hd);
     deals.slice(0, 25).forEach(function (d) {
       var tr = el('tr'), nm = el('td'); nm.appendChild(el('b', null, d.name)); nm.appendChild(el('small', { style: 'display:block' }, (d.variable ? 'Variable' : 'Fixed' + (d.term ? ' ' + d.term + ' months' : '')) + (d.exitFeeP ? ', exit fee ' + pounds(d.exitFeeP) : '') + (d.blocked ? ' (not open to us: ' + d.blocked + ')' : '')));
+      if (d.feeP) nm.appendChild(el('small', { style: 'display:block' }, 'Includes the ' + pounds(d.feeP) + ' exit fee on the current deal' + (d.waitDiffP !== null && d.waitDiffP !== undefined ? '. If you wait until it ends: ' + (d.waitDiffP < 0 ? '-' : '+') + pounds(Math.abs(d.waitDiffP)) + ' over 12 months, no fee.' : '.')));
       tr.appendChild(nm); tr.appendChild(el('td', null, pounds(d.costP)));
       var dv = d.diffP === null || d.diffP === undefined ? '' : (d.diffP < 0 ? '-' : '+') + pounds(Math.abs(d.diffP)); var tdv = el('td', null, dv); if (d.diffP < 0) tdv.style.color = 'var(--success-text)'; tr.appendChild(tdv);
       tr.appendChild(el('td', null, fmt(d.unitP, 2) + 'p')); tr.appendChild(el('td', null, fmt(d.standingP, 1) + 'p/day')); t.appendChild(tr);
@@ -1552,10 +1553,12 @@
     }
     var only = $('tfOnlyOk').checked, hz = S.horizons, cur = S.current, mdl = S.model, age = Math.round((Date.now() - S.made) / 3600e3);
     var all = S.tariffs.filter(function (t) { return !(only && t.blocked); }), left = S.tariffs.filter(function (t) { return t.blocked; });
-    var typeOf = function (t) { return fixedOf(t) ? 'FIXED ' + t.term + ' months' : /tracker|agile|half-hourly/i.test(t.kind) ? 'VARIABLE (follows the market)' : 'VARIABLE (price can change)'; };
+    var typeOf = function (t) { return fixedOf(t) ? 'FIXED ' + t.term + ' months' + (t.exitFeeP ? ', exit fee ' + pounds(t.exitFeeP) : '') : /tracker|agile|half-hourly/i.test(t.kind) ? 'VARIABLE (follows the market)' : 'VARIABLE (price can change)'; };
     var fixedOf = function (t) { return t.term > 0 && !t.variable && !/tracker|agile|half-hourly/i.test(t.kind); };
     var hOf = function (t) { if (TFMODE === 'own') { if (fixedOf(t)) { var h = Math.min(36, Math.round(t.term)); return hz.indexOf(h) >= 0 ? h : 12; } return 12; } return +TFMODE; };
-    var diffOf = function (t) { var h = hOf(t); return t.proj[h][2] - S.curProj[h][2]; };
+    // leaving a fixed deal before it ends costs its exit fee: it is added to every other deal's cost, so the savings shown are what Dad really keeps
+    var exitNow = (cur.endMs && cur.endMs > Date.now() && cur.exitP > 0 && !cur.variableDeal) ? cur.exitP : 0, isCur = function (t) { return !!(cur.tariffCode && t.code && String(cur.tariffCode).indexOf(t.code) >= 0); }, feeOf = function (t) { return isCur(t) ? 0 : exitNow; };
+    var diffOf = function (t) { var h = hOf(t); return t.proj[h][2] - S.curProj[h][2] + feeOf(t); };
     var rows = all.slice().sort(function (a, b) { return diffOf(a) / hOf(a) - diffOf(b) / hOf(b); });
     var pathAt = function (i) { if (SC === 'base') return mdl.path[i] || 1; return mdl.months[i] && mdl.months[i][0] >= '2027-01' ? 1 + (+SC) / 100 : 1; };
     var lvlAt = function (h) { return pathAt(Math.min(h, mdl.months.length) - 1); };
@@ -1569,7 +1572,7 @@
     // ---- 1. the answer: import, export and the two together ----
     var hc = TFMODE === 'own' ? 12 : +TFMODE, cp = S.curProj[hc], cr = cur.rates;
     var best = rows[0], hB = hOf(best), pB = best.proj[hB], cB = S.curProj[hB], dB = diffOf(best);
-    var impM = function (t) { var h = hOf(t); return (t.proj[h][0] - S.curProj[h][0]) / h; };            // extra import cost per month against current (negative = cheaper)
+    var impM = function (t) { var h = hOf(t); return (t.proj[h][0] - S.curProj[h][0] + feeOf(t)) / h; };            // extra import cost per month against current (negative = cheaper)
     var impRows = all.slice().sort(function (a, b) { return impM(a) - impM(b); });
     var exVal = function (e) { return SC !== 'base' && e.scen && e.scen[SC] && e.scen[SC][hc] !== undefined ? e.scen[SC][hc] : (e.proj && e.proj[hc] ? e.proj[hc][0] : 0); };
     var exAll = (S.exports || []).filter(function (e) { return !(only && e.blocked) && e.proj; }).sort(function (a, b) { return exVal(b) - exVal(a); });
@@ -1584,6 +1587,7 @@
     hd.appendChild(el('div', { class: 'tfl' }, 'Best result over ' + hB + ' months, against ' + cur.name));
     hd.appendChild(el('div', { class: 'tfbig' }, -dB / hB > 0.5 ? 'Save ' + pounds(-dB / hB) + ' a month' : 'Stay on ' + cur.name));
     hd.appendChild(el('div', { class: 'tfs' }, -dB / hB > 0.5 ? best.name + ' with ' + (exName(best, hB) || 'no export deal') + ' (' + pounds(-dB) + ' over ' + hB + ' months)' : 'Nothing we can get beats it'));
+    if (cur.endMs && !cur.variableDeal) hd.appendChild(el('div', { class: 'tfs', style: 'margin-top:6px' }, 'Dad\'s current deal is fixed ' + (cur.endMs > Date.now() ? 'until ' + new Date(cur.endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + (exitNow ? '. Leaving before then costs a ' + pounds(exitNow) + ' exit fee, which is already counted in every saving below. Waiting until it ends avoids the fee.' : '. It has no exit fee, so switching early costs nothing.') : 'and ended ' + new Date(cur.endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + '.')));
     var tg = el('div', { class: 'tftiles' });
     var bi = impRows[0], be = exAll[0];
     if (bi) tile(tg, 'Best import deal', bi.name, mo(-impM(bi)), impM(bi) < 0, 'Current: ' + cur.name);
