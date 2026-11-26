@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '81d84695d0', u = new URL(location.href);
+    var id = '94cae4e93c', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -662,9 +662,18 @@
   <div id="viewTf" hidden>
     <section aria-label="Tariffs">
       <h2>Tariff comparison</h2>
+      <div class="seg" id="tfKind" style="margin:8px 0"><button id="tfBtnElec" aria-selected="true">Electricity</button><button id="tfBtnGas" aria-selected="false">Gas</button></div>
+      <div id="tfElecPane">
       <div class="sub">Your real grid purchases, priced again on every deal open to you. Import and export are ranked separately. Read-only.</div>
       <div class="daybar tfbar"><button class="btn primary" id="tfScan" hidden>Scan deals now</button><label class="sub" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="tfOnlyOk" checked> Only deals we can actually get</label><span class="sub" id="tfMsg"></span><span class="sub" id="tfLast" style="margin-left:auto"></span></div>
       <div id="tfOut"></div>
+      </div>
+      <div id="tfGasPane" hidden>
+        <div class="sub">Dad's real gas use from his smart gas meter, priced on every gas deal open to him. Gas use is seasonal, so the weeks we have are scaled to a year with a typical UK shape. Read-only.</div>
+        <div class="daybar tfbar"><button class="btn primary" id="gasScan" hidden>Read meter again</button></div>
+        <div class="sub" id="gasMsg"></div>
+        <div id="gasOut"></div>
+      </div>
     </section>
   </div>
   <div id="viewCar" hidden>
@@ -1464,6 +1473,46 @@
   var TF = null;
   function loadTf() { gs('getTariffs', [(window.__ACCESS__ || {}).key || ''], function (r) { TF = r; renderTf(); }, function (e) { $('tfMsg').textContent = 'Could not load: ' + e; }); }
   $('tfOnlyOk').addEventListener('change', function () { renderTf(); });
+  // ---------------------------------------------------------------- gas tab
+  function renderGas(G) {
+    var o = $('gasOut'); clear(o); $('gasMsg').textContent = '';
+    if (!G) return;
+    if (G.error) { $('gasMsg').textContent = 'Could not read the gas meter: ' + G.error; return; }
+    var U = G.usage || {};
+    $('gasScan').hidden = !(TF && TF.owner);
+    if (!U.days) { $('gasMsg').textContent = G.note || 'No complete days of gas readings yet.'; return; }
+    var card = el('div', { class: 'card' });
+    card.appendChild(el('div', { class: 'sub' }, 'What this is based on'));
+    card.appendChild(el('div', null, U.days + ' full days (' + U.from + ' to ' + U.to + '): ' + fmt(U.kwh, 0) + ' kWh, about ' + fmt(U.perDay, 1) + ' kWh a day. Scaled to a year: about ' + fmt(U.annualKwh, 0) + ' kWh.'));
+    card.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Meter readings taken as ' + (U.unit === 'm3' ? 'cubic metres (converted to kWh)' : 'kWh') + '. If the kWh a day looks wrong, set the units in Setup. Gas price rises nobody has announced yet are not forecast.'));
+    o.appendChild(card);
+    var cur = G.current;
+    if (cur) { var cc = el('div', { class: 'card', style: 'margin-top:10px' }); cc.appendChild(el('div', { class: 'sub' }, 'Dad\'s deal now')); cc.appendChild(el('b', null, cur.name)); cc.appendChild(el('div', null, fmt(cur.unitP, 2) + 'p a kWh, ' + fmt(cur.standingP, 1) + 'p a day. About ' + pounds(cur.costP) + ' over the next 12 months.')); o.appendChild(cc); }
+    var only = $('tfOnlyOk') ? $('tfOnlyOk').checked : true, deals = (G.deals || []).filter(function (d) { return !only || !d.blocked; });
+    var t = el('table'), hd = el('tr'); ['Deal', 'Next 12 months', 'Against now', 'Unit', 'Standing'].forEach(function (x) { hd.appendChild(el('th', null, x)); }); t.appendChild(hd);
+    deals.slice(0, 25).forEach(function (d) {
+      var tr = el('tr'), nm = el('td'); nm.appendChild(el('b', null, d.name)); nm.appendChild(el('small', { style: 'display:block' }, (d.variable ? 'Variable' : 'Fixed' + (d.term ? ' ' + d.term + ' months' : '')) + (d.exitFeeP ? ', exit fee ' + pounds(d.exitFeeP) : '') + (d.blocked ? ' (not open to us: ' + d.blocked + ')' : '')));
+      tr.appendChild(nm); tr.appendChild(el('td', null, pounds(d.costP)));
+      var dv = d.diffP === null || d.diffP === undefined ? '' : (d.diffP < 0 ? '-' : '+') + pounds(Math.abs(d.diffP)); var tdv = el('td', null, dv); if (d.diffP < 0) tdv.style.color = 'var(--success-text)'; tr.appendChild(tdv);
+      tr.appendChild(el('td', null, fmt(d.unitP, 2) + 'p')); tr.appendChild(el('td', null, fmt(d.standingP, 1) + 'p/day')); t.appendChild(tr);
+    });
+    var wrap = el('div', { class: 'card scroll', style: 'margin-top:10px' }); wrap.appendChild(t); o.appendChild(wrap);
+    if (G.note) o.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, G.note));
+  }
+  var GAS = null;
+  function loadGas(force) {
+    $('gasMsg').textContent = 'Reading the gas meter…';
+    gs('getGasTariffs', [(window.__ACCESS__ || {}).key || '', !!force], function (r) { GAS = r; renderGas(r); }, function (e) { $('gasMsg').textContent = 'Could not load: ' + e; });
+  }
+  function tfKind(k) {
+    $('tfElecPane').hidden = k !== 'elec'; $('tfGasPane').hidden = k !== 'gas';
+    $('tfBtnElec').setAttribute('aria-selected', k === 'elec' ? 'true' : 'false'); $('tfBtnGas').setAttribute('aria-selected', k === 'gas' ? 'true' : 'false');
+    if (k === 'gas' && !GAS) loadGas(false);
+  }
+  $('tfBtnElec').addEventListener('click', function () { tfKind('elec'); });
+  $('tfBtnGas').addEventListener('click', function () { tfKind('gas'); });
+  $('gasScan').addEventListener('click', function () { loadGas(true); });
+  if ($('tfOnlyOk')) $('tfOnlyOk').addEventListener('change', function () { if (GAS) renderGas(GAS); });
   var tfPoll = 0;
   function tfWatch(tok, t0) {
     setTimeout(function () {
