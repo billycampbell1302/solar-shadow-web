@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '39d6fb0866', u = new URL(location.href);
+    var id = '76ad3acc2c', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1472,7 +1472,7 @@
         if (tok !== tfPoll) return; var b = $('tfScan'), st = r && r.state;
         if (st && st.state === 'running') { $('tfMsg').textContent = 'Scanning prices… ' + Math.round((Date.now() - t0) / 1000) + 's' + (st.note ? ' (' + st.note + ')' : '') + '. You can leave this page; it carries on.'; tfWatch(tok, t0); return; }
         if (st && st.state === 'error') { b.disabled = false; $('tfMsg').textContent = 'Scan failed: ' + st.msg; return; }
-        gs('getTariffs', [(window.__ACCESS__ || {}).key || ''], function (r2) { if (tok !== tfPoll) return; b.disabled = false; $('tfMsg').textContent = ''; TF = r2; renderTf(); }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan finished but the result could not be loaded: ' + e; });
+        gs('getTariffs', [(window.__ACCESS__ || {}).key || ''], function (r2) { if (tok !== tfPoll) return; b.disabled = false; $('tfMsg').textContent = ''; TF = r2; renderTf(); if (!r2 || !r2.scan || r2.scan.made < t0 - 5000) $('tfMsg').textContent = 'The scan finished but its result was not saved, so the figures below are from the last good scan.'; }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan finished but the result could not be loaded: ' + e; });
       }, function (e) { if (tok === tfPoll) tfWatch(tok, t0); });
     }, 5000);
   }
