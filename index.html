@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '41cdf954cf', u = new URL(location.href);
+    var id = 'b028baeebe', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1478,27 +1478,50 @@
     var o = $('gasOut'); clear(o); $('gasMsg').textContent = '';
     if (!G) return;
     if (G.error) { $('gasMsg').textContent = 'Could not read the gas meter: ' + G.error; return; }
-    var U = G.usage || {};
+    var U = G.usage || {}, cur = G.current;
     $('gasScan').hidden = !(TF && TF.owner);
     if (!U.days) { $('gasMsg').textContent = G.note || 'No complete days of gas readings yet.'; return; }
-    var card = el('div', { class: 'card' });
-    card.appendChild(el('div', { class: 'sub' }, 'What this is based on'));
-    card.appendChild(el('div', null, U.days + ' full days (' + U.from + ' to ' + U.to + '): ' + fmt(U.kwh, 0) + ' kWh, about ' + fmt(U.perDay, 1) + ' kWh a day. Scaled to a year: about ' + fmt(U.annualKwh, 0) + ' kWh.'));
-    card.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Meter readings taken as ' + (U.unit === 'm3' ? 'cubic metres (converted to kWh)' : 'kWh') + '. If the kWh a day looks wrong, set the units in Setup. Gas price rises nobody has announced yet are not forecast.'));
-    o.appendChild(card);
-    var cur = G.current;
-    if (cur) { var cc = el('div', { class: 'card', style: 'margin-top:10px' }); cc.appendChild(el('div', { class: 'sub' }, 'Dad\'s deal now')); cc.appendChild(el('b', null, cur.name)); cc.appendChild(el('div', null, fmt(cur.unitP, 2) + 'p a kWh, ' + fmt(cur.standingP, 1) + 'p a day. About ' + pounds(cur.costP) + ' over the next 12 months.')); if (cur.endMs) cc.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, (cur.variable ? 'Variable deal.' : 'Fixed') + ' ' + (cur.endMs > Date.now() ? 'Ends ' + new Date(cur.endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + (cur.exitNowP ? '. Leaving before then costs a ' + pounds(cur.exitNowP) + ' exit fee; it is included in "Against now" below.' : '.') : 'It has ended.'))); o.appendChild(cc); }
     var only = $('tfOnlyOk') ? $('tfOnlyOk').checked : true, deals = (G.deals || []).filter(function (d) { return !only || !d.blocked; });
-    var t = el('table'), hd = el('tr'); ['Deal', 'Next 12 months', 'Against now', 'Unit', 'Standing'].forEach(function (x) { hd.appendChild(el('th', null, x)); }); t.appendChild(hd);
-    deals.slice(0, 25).forEach(function (d) {
-      var tr = el('tr'), nm = el('td'); nm.appendChild(el('b', null, d.name)); nm.appendChild(el('small', { style: 'display:block' }, (d.variable ? 'Variable' : 'Fixed' + (d.term ? ' ' + d.term + ' months' : '')) + (d.exitFeeP ? ', exit fee ' + pounds(d.exitFeeP) : '') + (d.blocked ? ' (not open to us: ' + d.blocked + ')' : '')));
-      if (d.feeP) nm.appendChild(el('small', { style: 'display:block' }, 'Includes the ' + pounds(d.feeP) + ' exit fee on the current deal' + (d.waitDiffP !== null && d.waitDiffP !== undefined ? '. If you wait until it ends: ' + (d.waitDiffP < 0 ? '-' : '+') + pounds(Math.abs(d.waitDiffP)) + ' over 12 months, no fee.' : '.')));
-      tr.appendChild(nm); tr.appendChild(el('td', null, pounds(d.costP)));
-      var dv = d.diffP === null || d.diffP === undefined ? '' : (d.diffP < 0 ? '-' : '+') + pounds(Math.abs(d.diffP)); var tdv = el('td', null, dv); if (d.diffP < 0) tdv.style.color = 'var(--success-text)'; tr.appendChild(tdv);
+    var mo = function (v) { return (v >= 0 ? '+' : '-') + pounds(Math.abs(v)) + ' / month'; };
+    var tile = function (host, label, name, money, good, note) {
+      var t = el('div', { class: 'tftile' });
+      t.appendChild(el('div', { class: 'tfl' }, label)); t.appendChild(el('div', { class: 'tfn' }, name));
+      t.appendChild(el('div', { class: 'tfv ' + (good ? 'pos' : '') }, money)); if (note) t.appendChild(el('div', { class: 'tfs' }, note)); host.appendChild(t);
+    };
+    var best = deals.filter(function (d) { return !cur || d.code !== cur.code; })[0], bd = best && best.diffP !== null ? best.diffP : null;
+    var hd = el('div', { class: 'card headline tfhero', style: 'margin-top:10px' });
+    hd.appendChild(el('div', { class: 'tfl' }, 'Best result over 12 months' + (cur ? ', against ' + cur.name : '')));
+    hd.appendChild(el('div', { class: 'tfbig' }, bd !== null && -bd / 12 > 0.5 ? 'Save ' + pounds(-bd / 12) + ' a month' : 'Stay on ' + (cur ? cur.name : 'the current deal')));
+    hd.appendChild(el('div', { class: 'tfs' }, bd !== null && -bd / 12 > 0.5 ? best.name + ' (' + pounds(-bd) + ' over 12 months' + (best.feeP ? ', after the ' + pounds(best.feeP) + ' exit fee' : '') + ')' : 'Nothing we can get beats it'));
+    if (cur && cur.endMs) hd.appendChild(el('div', { class: 'tfs', style: 'margin-top:6px' }, (cur.variable ? 'Variable deal. ' : 'Fixed deal ') + (cur.endMs > Date.now() ? 'ends ' + new Date(cur.endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + (cur.exitNowP ? '. Leaving before then costs a ' + pounds(cur.exitNowP) + ' exit fee, already counted in every saving below.' : '.') : 'has ended.')));
+    var tg = el('div', { class: 'tftiles' });
+    var fixedBest = deals.filter(function (d) { return !d.variable && (!cur || d.code !== cur.code); })[0], varBest = deals.filter(function (d) { return d.variable && (!cur || d.code !== cur.code); })[0];
+    if (varBest && varBest.diffP !== null) tile(tg, 'Best variable deal', varBest.name, mo(varBest.diffP / 12), varBest.diffP < 0, cur ? 'Current: ' + cur.name : '');
+    if (fixedBest && fixedBest.diffP !== null) tile(tg, 'Best fixed deal', fixedBest.name, mo(fixedBest.diffP / 12), fixedBest.diffP < 0, (fixedBest.term ? fixedBest.term + ' months' : 'Fixed') + (fixedBest.exitFeeP ? ', exit fee ' + pounds(fixedBest.exitFeeP) : ''));
+    if (cur) tile(tg, 'Gas use, next 12 months', fmt(U.annualKwh, 0) + ' kWh', pounds(cur.costP), false, 'On the current deal: ' + fmt(cur.unitP, 2) + 'p a kWh, ' + fmt(cur.standingP, 1) + 'p a day');
+    hd.appendChild(tg); o.appendChild(hd);
+    // every deal, cheapest first
+    var c2 = el('div', { class: 'card tfcard', style: 'margin-top:10px' }); c2.appendChild(tfHead('🔥', 'Every gas deal, next 12 months' + (cur ? ' against ' + cur.name : '')));
+    var t = el('table'), hr = el('tr'); ['Deal', 'Type', '12 months', cur ? 'Per month' : 'Per month', 'Unit', 'Standing'].forEach(function (x) { hr.appendChild(el('th', null, x)); }); t.appendChild(hr);
+    deals.slice(0, 30).forEach(function (d) {
+      var tr = el('tr'), nm = el('td'); nm.appendChild(el('b', null, d.name));
+      if (d.blocked) nm.appendChild(el('small', { style: 'display:block' }, 'Not open to us: ' + d.blocked));
+      if (d.feeP) nm.appendChild(el('small', { style: 'display:block' }, 'Includes the ' + pounds(d.feeP) + ' exit fee on the current deal' + (d.waitDiffP !== null && d.waitDiffP !== undefined ? '. Waiting until it ends instead: ' + mo(d.waitDiffP / 12) + ', no fee.' : '.')));
+      tr.appendChild(nm);
+      tr.appendChild(el('td', null, d.variable ? 'Variable' : 'Fixed' + (d.term ? ' ' + d.term + ' mo' : '') + (d.exitFeeP ? ', exit ' + pounds(d.exitFeeP) : '')));
+      tr.appendChild(el('td', null, pounds(d.costP)));
+      var dv = d.diffP === null || d.diffP === undefined ? '' : mo(d.diffP / 12).replace(' / month', ''); var tdv = el('td', null, dv); if (d.diffP < 0) tdv.style.color = 'var(--success-text)'; tr.appendChild(tdv);
       tr.appendChild(el('td', null, fmt(d.unitP, 2) + 'p')); tr.appendChild(el('td', null, fmt(d.standingP, 1) + 'p/day')); t.appendChild(tr);
     });
-    var wrap = el('div', { class: 'card scroll', style: 'margin-top:10px' }); wrap.appendChild(t); o.appendChild(wrap);
-    if (G.note) o.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, G.note));
+    var wrap = el('div', { class: 'scroll' }); wrap.appendChild(t); c2.appendChild(wrap); o.appendChild(c2);
+    // what the scan is based on
+    var c3 = el('div', { class: 'card tfcard', style: 'margin-top:10px' }); c3.appendChild(tfHead('🔎', 'What this is based on'));
+    c3.appendChild(el('div', null, U.days + ' full days of Dad\'s gas meter (' + U.from + ' to ' + U.to + '): ' + fmt(U.kwh, 0) + ' kWh, about ' + fmt(U.perDay, 1) + ' kWh a day. A normal year at this weather link comes to about ' + fmt(U.annualKwh, 0) + ' kWh.'));
+    if (U.weather) c3.appendChild(el('div', { style: 'margin-top:6px' }, 'Weather link learned: about ' + fmt(U.weather.baseKwhDay, 1) + ' kWh a day all year (hot water, cooking) plus ' + fmt(U.weather.perHdd, 2) + ' kWh for every degree-day of cold (fit ' + Math.round(U.weather.r2 * 100) + '%), so winter uses far more than summer.'));
+    else c3.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, 'The readings do not yet cover enough different temperatures to learn the weather link, so a typical UK winter-against-summer shape is used.'));
+    if (U.monthKwh) { var mn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], mt = el('div', { class: 'sub', style: 'margin-top:6px;display:flex;gap:10px;flex-wrap:wrap' }); U.monthKwh.forEach(function (v, i) { mt.appendChild(el('span', null, mn[i] + ' ' + fmt(v, 0) + ' kWh')); }); c3.appendChild(mt); }
+    c3.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, 'Meter readings taken as ' + (U.unit === 'm3' ? 'cubic metres (converted to kWh)' : 'kWh') + '. If the kWh a day looks wrong, set the units in Setup. Gas price rises nobody has announced yet are not forecast.' + (G.note ? ' ' + G.note : '')));
+    o.appendChild(c3);
   }
   var GAS = null;
   function loadGas(force) {
