@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '29cb73700d', u = new URL(location.href);
+    var id = '272504263c', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -531,7 +531,7 @@
   </header>
   <div class="sub" id="verNote" hidden></div>
   <nav class="tabs" role="tablist"><button role="tab" id="tabDash" aria-selected="true">Dashboard</button><button role="tab" id="tabLog" aria-selected="false">Daily log</button><button role="tab" id="tabAct" aria-selected="false">Activity</button><button role="tab" id="tabBr" aria-selected="false" hidden>Our software</button><button role="tab" id="tabTf" aria-selected="false">Tariffs</button><button role="tab" id="tabCar" aria-selected="false">Cars</button><button role="tab" id="tabSh" aria-selected="false">Summerhouse</button><button role="tab" id="tabSetup" aria-selected="false">Setup</button></nav>
-  <details class="about"><summary>About this page</summary><div class="sub">Solis AI keeps running the battery exactly as it is set up. Our software plans as if it were in charge, and each day we compare the two on the same real solar, house use and prices.</div></details>
+  <details class="about"><summary>About this page</summary><div class="sub">This is a read-only view of Dad's system. Solis AI runs the battery; this page shows what happened, what it cost, and what to expect next. Nothing here changes the inverter.</div></details>
   <div id="banners"></div>
 
   <div id="viewDash">
@@ -571,15 +571,15 @@
     </div>
   </section>
 
-  <section aria-label="Plan" hidden>
-    <h2>Next 24 hours: what our software would do</h2>
-    <div class="sub" id="planSub">Not sent anywhere. This is the plan it would be following if it were in charge.</div>
-    <div class="card" id="projCard" style="margin-top:10px" hidden></div>
+  <section aria-label="Plan">
+    <h2>Next 24 hours</h2>
+    <div class="sub" id="planSub">What we expect for solar, house use and the electricity price.</div>
+    <div class="kpis" id="planKpis" style="margin-top:10px"></div>
     <div class="grid2" style="margin-top:10px">
-      <div class="card"><h2 style="font-size:14px">Planned battery level</h2><div class="chart" id="chPlanSoc"></div></div>
-      <div class="card"><h2 style="font-size:14px">Planned battery power</h2><div class="legend"><span><i class="box" style="background:var(--ours)"></i>Charging</span><span><i class="box" style="background:var(--ours-soft)"></i>Discharging</span></div><div class="chart" id="chPlanPow"></div></div>
+      <div class="card"><h2 style="font-size:14px">Solar and house use expected</h2><div class="legend"><span><i style="background:var(--ours)"></i>Solar</span><span><i style="background:var(--solis)"></i>House</span></div><div class="chart" id="chPlanPv"></div></div>
+      <div class="card"><h2 style="font-size:14px">Electricity price</h2><div class="chart" id="chPrice"></div></div>
     </div>
-    <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Import price</h2><div class="chart" id="chPrice"></div><details><summary>View the plan as a table</summary><div class="scroll" id="tblPlan"></div></details></div>
+    <div class="card" style="margin-top:14px"><details><summary>View as a table</summary><div class="scroll" id="tblPlan"></div></details></div>
   </section>
 
   <section aria-label="History" hidden>
@@ -641,12 +641,8 @@
     <h2>How to read this</h2>
     <ul>
       <li><b>Solis AI (actual).</b> What really happened, priced from the inverter's own counters of grid import, export and battery use.</li>
-      <li><b>Our software (replay).</b> What our planner would have done at every half hour, using only the solar and house forecasts it had saved at that moment. It never sees what happens next. It is a replay against real conditions, so battery effects we don't model can make a real run differ a little.</li>
-      <li><b>Predbat (replay).</b> Predbat's real planner, run on the same saved forecasts and prices at every half hour, with its default settings. Its first action is applied to the real day. It isn't Predbat running live on Dad's system, and it is scored once a day, so it appears on finished days only, not on today's scoreboard.</li>
-      <li><b>Perfect hindsight.</b> The best schedule possible if the whole day were known in advance. Nobody can reach it; it shows how much was on the table.</li>
-      <li><b>Plain overnight fill.</b> A basic inverter that fills the battery in the cheap window and then just uses it. A yardstick for how smart Solis AI is being.</li>
-      <li>Every cost is only money paid to the energy company for grid power. Solis AI is the real bill; the other runs are that real bill adjusted for the battery level each one reached (more stored means more grid energy bought, less means less). Battery wear and energy left in the battery are not paid to anyone, so they are shown beside the costs and never added in.</li>
-      <li>Export is <span id="exportState">off</span>, so none of the four assumes selling to the grid.</li>
+      <li>Every cost is only money paid to the energy company for grid power. Battery wear and energy left in the battery are not paid to anyone, so they are not added in.</li>
+      <li>Export is <span id="exportState">off</span>, so nothing here assumes selling to the grid.</li>
     </ul>
   </section>
   </div>
@@ -1169,18 +1165,21 @@
     });
   }
   function renderPlan() {
-    try { renderProj(); } catch (eP) { /* the projection card is optional */ }
-    var P = D.plan || [];
-    if (!P.length) { ['chPlanSoc', 'chPlanPow', 'chPrice'].forEach(function (id) { clear($(id)); $(id).appendChild(el('div', { class: 'empty' }, 'The first plan appears after the first reading.')); }); return; }
+    var P = D.plan || [], k = $('planKpis'); clear(k);
+    if (!P.length) { ['chPlanPv', 'chPrice'].forEach(function (id) { clear($(id)); $(id).appendChild(el('div', { class: 'empty' }, 'The forecast appears after the first reading.')); }); return; }
     var Q = P.slice(0, 48), x = Q.map(function (r) { return hhmm(r.t); }), tickIdx = [0, 8, 16, 24, 32, 40];
-    if (D.planNow) $('planSub').textContent = 'Not sent anywhere. Right now it would be: ' + String(D.planNow.action).replace(/_/g, ' ').toLowerCase() + '. Plan made ' + hhmm(D.planNow.time) + '.';
-    lineChart($('chPlanSoc'), { x: x, series: [{ name: 'Battery', color: C.ours, values: Q.map(function (r) { return r.socKwh / D.capKwh * 100; }) }], yMin: 0, yMax: 100, yTicks: [0, 25, 50, 75, 100], area: true, yFmt: function (v) { return Math.round(v) + '%'; }, xTickIdx: tickIdx, label: 'Planned battery level' });
-    barChart($('chPlanPow'), { x: x, values: Q.map(function (r) { return r.battKw; }), min: 1, colorFor: function (i) { return Q[i].battKw >= 0 ? 'var(--ours)' : 'var(--ours-soft)'; }, yFmt: function (v) { return fmt(v, 0) + ' kW'; }, xTickIdx: tickIdx,
-      tip: function (i) { var r = Q[i]; return [{ name: String(r.action).replace(/_/g, ' ').toLowerCase(), color: r.battKw >= 0 ? 'var(--ours)' : 'var(--ours-soft)', value: fmt(r.battKw, 1) + ' kW' }, { name: 'Grid', color: 'var(--muted)', value: fmt(r.gridKw, 1) + ' kW' }]; }, label: 'Planned battery power' });
-    lineChart($('chPrice'), { x: x, series: [{ name: 'Import price', color: C.plain, values: Q.map(function (r) { return r.impP; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 0) + 'p'; }, xTickIdx: tickIdx, h: 150, label: 'Import price' });
-    table($('tblPlan'), ['Time', 'Action', 'Battery kW', 'Grid kW', 'Battery %', 'Import p'], Q.map(function (r, i) { return [x[i], String(r.action).replace(/_/g, ' ').toLowerCase(), fmt(r.battKw, 1), fmt(r.gridKw, 1), fmt(r.socKwh / D.capKwh * 100, 0) + '%', fmt(r.impP, 1)]; }));
+    var pv = 0, ld = 0, lo = Infinity, hi = -Infinity, loI = 0, hiI = 0;
+    Q.forEach(function (r, i) { pv += (r.pvKw || 0) / 2; ld += (r.loadKw || 0) / 2; if (r.impP < lo) { lo = r.impP; loI = i; } if (r.impP > hi) { hi = r.impP; hiI = i; } });
+    function tile(t, v, s) { var c = el('div', { class: 'card' }); c.appendChild(el('div', { class: 'sub' }, t)); c.appendChild(el('div', { style: 'font-size:22px;font-weight:600' }, v)); if (s) c.appendChild(el('div', { class: 'sub' }, s)); k.appendChild(c); }
+    tile('Solar expected', fmt(pv, 1) + ' kWh', 'over the next 24 hours');
+    tile('House use expected', fmt(ld, 1) + ' kWh', 'over the next 24 hours');
+    tile('Cheapest electricity', fmt(lo, 1) + 'p', 'from ' + x[loI]);
+    tile('Dearest electricity', fmt(hi, 1) + 'p', 'from ' + x[hiI]);
+    $('planSub').textContent = 'Forecast from ' + x[0] + ': what we expect for solar, house use and the electricity price. What Solis AI does with the battery is shown on Today once it has happened.';
+    lineChart($('chPlanPv'), { x: x, series: [{ name: 'Solar', color: 'var(--ours)', values: Q.map(function (r) { return r.pvKw || 0; }) }, { name: 'House', color: 'var(--solis)', values: Q.map(function (r) { return r.loadKw || 0; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tickIdx, label: 'Solar and house use expected' });
+    lineChart($('chPrice'), { x: x, series: [{ name: 'Import price', color: C.plain, values: Q.map(function (r) { return r.impP; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 0) + 'p'; }, xTickIdx: tickIdx, label: 'Import price' });
+    table($('tblPlan'), ['Time', 'Solar kW', 'House kW', 'Price p'], Q.map(function (r, i) { return [x[i], fmt(r.pvKw || 0, 1), fmt(r.loadKw || 0, 1), fmt(r.impP, 1)]; }));
   }
-
   function renderHistory() {
     var rows = (D.daily || []).slice(-60), ok = rows.filter(function (r) { return r.status === 'ok'; }), t = $('tblDaily'); clear(t);
     var head = el('tr'); ['Day', 'Solis AI', 'Ours', 'Predbat', 'Perfect', 'Plain', 'Ours saved', 'Predbat saved', 'Of possible', 'Battery at cheap-rate end (Solis / ours / Predbat / perfect)'].forEach(function (h) { head.appendChild(el('th', null, h)); }); t.appendChild(head);
@@ -1266,8 +1265,6 @@
     var R = Q.reconcile;
     if (!R || R.avgAbsPct === null || R.avgAbsPct === undefined) li('na', 'Octopus meter check', 'Waiting for Octopus data (it arrives about two days late) or the account details.');
     else li(R.avgAbsPct <= 3 ? 'good' : 'warn', 'Octopus meter check', 'Solis\'s import figure differs from the meter by ' + R.avgAbsPct + '% on average over ' + R.days + ' days.');
-    if (!D.predbatEnabled) li('na', 'Predbat replay', 'Not switched on. Needs the GitHub token and repo (see the README).');
-    else li(D.predbatDays > 0 ? 'good' : 'warn', 'Predbat replay', D.predbatDays > 0 ? 'Replayed on ' + D.predbatDays + ' finished day' + (D.predbatDays === 1 ? '' : 's') + '. It runs once a day, after midnight.' : 'Switched on, waiting for its first finished day (about a day after the first good day).');
     var T = Q.rates;
     if (!T) li('na', 'Tariff rates', 'Not checked yet (runs once a day).'); else li(T.ok === true ? 'good' : T.ok === false ? 'crit' : 'warn', 'Tariff rates', T.text);
   }
@@ -1353,7 +1350,6 @@
     var age = st.lastReadingMs ? (Date.now() - st.lastReadingMs) / 60000 : null;
     li(age === null ? 'na' : age < 30 ? 'good' : 'crit', 'Latest reading', age === null ? 'None yet.' : ago(age) + '.');
     li(set.SOLCAST_API_KEY && set.SOLCAST_SITE_IDS ? 'good' : 'na', 'Solcast', set.SOLCAST_API_KEY && set.SOLCAST_SITE_IDS ? 'Set up.' : 'Optional. Not set up.');
-    li(set.GITHUB_TOKEN && set.GITHUB_REPO ? 'good' : 'na', 'Predbat replay', set.GITHUB_TOKEN && set.GITHUB_REPO ? 'Set up.' : 'Optional. Not set up.');
     li(set.OCTOPUS_API_KEY && set.OCTOPUS_MPAN && set.OCTOPUS_METER_SERIAL ? 'good' : 'na', 'Octopus meter check', set.OCTOPUS_API_KEY && set.OCTOPUS_MPAN && set.OCTOPUS_METER_SERIAL ? 'Set up.' : 'Optional. Not set up.');
     li = li0;
     (function () {
@@ -1379,7 +1375,6 @@
       { t: 'Everyday', n: ['testSolis', 'tick', 'installTriggers'] },
       { t: 'Past days', n: ['solisHistoryLoad', 'octopusDaysLoad'], need: null },
       { t: 'Forecasts and prices', n: ['solcastFetch', 'checkRates', 'scoreToday'] },
-      { t: 'Predbat replay', n: ['pushPredbatInputs', 'pullPredbat'], need: 'GITHUB_TOKEN' },
       { t: 'Summerhouse heater', n: ['tuyaLoginStart', 'tuyaLoginFinish', 'tuyaListDevices', 'summerhouseTest', 'summerhouseCapabilities', 'summerhouseRefresh'], need: 'TUYA_USER_CODE' }];
     var shown = {};
     GROUPS.forEach(function (gr) {
@@ -1392,7 +1387,7 @@
       ac.appendChild(row);
     });
     var hidden = {}; GROUPS.forEach(function (gr) { if (gr.need && !set[gr.need]) hidden[gr.t] = 1; });
-    if (hidden['Predbat replay'] || hidden['Summerhouse heater']) ac.appendChild(el('div', { class: 'sub', style: 'padding:8px 0' }, 'More tools appear here once ' + [hidden['Predbat replay'] ? 'the Predbat replay (GitHub token and repository)' : '', hidden['Summerhouse heater'] ? 'the summerhouse heater (Smart Life User Code)' : ''].filter(Boolean).join(' and ') + ' ' + (hidden['Predbat replay'] && hidden['Summerhouse heater'] ? 'are' : 'is') + ' set up.'));
+    if (hidden['Summerhouse heater']) ac.appendChild(el('div', { class: 'sub', style: 'padding:8px 0' }, 'More tools appear here once ' + [hidden['Summerhouse heater'] ? 'the summerhouse heater (Smart Life User Code)' : ''].filter(Boolean).join(' and ') + ' ' + (hidden['Predbat replay'] && hidden['Summerhouse heater'] ? 'are' : 'is') + ' set up.'));
     // settings
     var g = $('setupGroups'); clear(g); var groups = {}, order = [];
     st.items.forEach(function (i) { if (!groups[i.group]) { groups[i.group] = []; order.push(i.group); } groups[i.group].push(i); });
