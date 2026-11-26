@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '272504263c', u = new URL(location.href);
+    var id = 'b426d5680f', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1489,12 +1489,31 @@
     hd.appendChild(el('div', { class: 'tfbig' }, bd !== null && -bd / 12 > 0.5 ? 'Save ' + pounds(-bd / 12) + ' a month' : 'Stay on ' + (cur ? cur.name : 'the current deal')));
     hd.appendChild(el('div', { class: 'tfs' }, bd !== null && -bd / 12 > 0.5 ? best.name + ' (' + pounds(-bd) + ' over 12 months' + (best.feeP ? ', after the ' + pounds(best.feeP) + ' exit fee' : '') + ')' : 'Nothing we can get beats it'));
     if (cur && cur.endMs) hd.appendChild(el('div', { class: 'tfs', style: 'margin-top:6px' }, (cur.variable ? 'Variable deal. ' : 'Fixed deal ') + (cur.endMs > Date.now() ? 'ends ' + new Date(cur.endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) + (cur.exitNowP ? '. Leaving before then costs a ' + pounds(cur.exitNowP) + ' exit fee, already counted in every saving below.' : '.') : 'has ended.')));
+    var xcard = null;
+    if (cur) {
+      var xc = el('div', { class: 'card tfcard', style: 'margin-top:10px' }); xc.appendChild(tfHead('🚪', 'Leaving the current deal'));
+      var left = cur.endMs ? Math.ceil((cur.endMs - Date.now()) / 86400e3) : 0, fixedNow = !cur.variable && cur.endMs > Date.now();
+      var xr = function (a, b, strong) { var r = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--border)' }); r.appendChild(el('span', null, a)); var s = el('span', { style: 'text-align:right;' + (strong ? 'font-weight:600' : '') }, b); r.appendChild(s); xc.appendChild(r); };
+      if (!fixedNow) { xc.appendChild(el('div', null, cur.variable ? 'Dad is on a variable deal, so there is no fixed end date and no exit fee: he can switch whenever he likes.' : 'The fixed deal has ended, so he can switch with no exit fee.')); }
+      else {
+        xc.appendChild(el('div', null, 'Dad is on a fixed deal. Leaving early costs an exit fee; waiting until it ends does not.'));
+        xr('Fixed deal ends', new Date(cur.endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) + ' (' + left + ' day' + (left === 1 ? '' : 's') + ' left)');
+        xr('Exit fee if he leaves now', cur.exitNowP ? pounds(cur.exitNowP) : 'None found. Check with the supplier', true);
+        if (best && best.diffP !== null && best.diffP !== undefined) {
+          xr('Switch now to ' + best.name, (best.diffP < 0 ? 'saves ' + pounds(-best.diffP) : 'costs ' + pounds(best.diffP) + ' more') + ' over 12 months, after the fee');
+          if (best.waitDiffP !== null && best.waitDiffP !== undefined) xr('Wait until ' + new Date(cur.endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ', then switch', (best.waitDiffP < 0 ? 'saves ' + pounds(-best.waitDiffP) : 'costs ' + pounds(best.waitDiffP) + ' more') + ' over 12 months, no fee');
+          var better = best.waitDiffP !== null && best.waitDiffP !== undefined && best.waitDiffP < best.diffP ? 'Waiting works out cheaper than paying the fee.' : 'Switching now works out cheaper, even with the fee.';
+          xc.appendChild(el('div', { class: 'sub', style: 'margin-top:8px' }, better + ' The prices compared are today\'s; the fee comes from the supplier\'s published terms.'));
+        }
+      }
+      xcard = xc;
+    }
     var tg = el('div', { class: 'tftiles' });
     var fixedBest = deals.filter(function (d) { return !d.variable && (!cur || d.code !== cur.code); })[0], varBest = deals.filter(function (d) { return d.variable && (!cur || d.code !== cur.code); })[0];
     if (varBest && varBest.diffP !== null) tile(tg, 'Best variable deal', varBest.name, mo(varBest.diffP / 12), varBest.diffP < 0, cur ? 'Current: ' + cur.name : '');
     if (fixedBest && fixedBest.diffP !== null) tile(tg, 'Best fixed deal', fixedBest.name, mo(fixedBest.diffP / 12), fixedBest.diffP < 0, (fixedBest.term ? fixedBest.term + ' months' : 'Fixed') + (fixedBest.exitFeeP ? ', exit fee ' + pounds(fixedBest.exitFeeP) : ''));
     if (cur) tile(tg, 'Gas use, next 12 months', fmt(U.annualKwh, 0) + ' kWh', pounds(cur.costP), false, 'On the current deal: ' + fmt(cur.unitP, 2) + 'p a kWh, ' + fmt(cur.standingP, 1) + 'p a day');
-    hd.appendChild(tg); o.appendChild(hd);
+    hd.appendChild(tg); o.appendChild(hd); if (xcard) o.appendChild(xcard);
     // every deal, cheapest first
     var c2 = el('div', { class: 'card tfcard', style: 'margin-top:10px' }); c2.appendChild(tfHead('🔥', 'Every gas deal, next 12 months' + (cur ? ' against ' + cur.name : '')));
     var t = el('table'), hr = el('tr'); ['Deal', 'Type', '12 months', cur ? 'Per month' : 'Per month', 'Unit', 'Standing'].forEach(function (x) { hr.appendChild(el('th', null, x)); }); t.appendChild(hr);
