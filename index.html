@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '76ad3acc2c', u = new URL(location.href);
+    var id = '83dedd065e', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -2113,6 +2113,10 @@
     sum.textContent = 'Learned from ' + r.days + ' finished day' + (r.days === 1 ? '' : 's') + ' (' + r.from + ' to ' + r.to + '). Each day\'s night load is the average of its half hours from midnight to 06:00 with the spikes taken out (' + r.skippedHalfHours + ' half hour' + (r.skippedHalfHours === 1 ? '' : 's') + ' left out' + (r.oddDays ? ', and ' + r.oddDays + ' unusual day' + (r.oddDays === 1 ? '' : 's') : '') + '); the figure is the average of those days.';
     card.hidden = false; var n = $('blNums'); n.textContent = '';
     n.appendChild(tile('Night base load', r.baseKw.toFixed(2) + ' kW', 'Typical day ' + r.lowKw.toFixed(2) + ' to ' + r.highKw.toFixed(2) + ' kW'));
+    window.__gs('getPreSolarBase', [(window.__ACCESS__ || {}).key || ''], function (p) {
+      if (!p || !p.nights) { n.appendChild(tile('Before the solar was fitted', '–', (p && p.note) || 'Not available')); return; }
+      n.appendChild(tile('Before the solar was fitted', p.baseKw.toFixed(2) + ' kW', 'Octopus meter, ' + p.nights + ' nights midnight to 06:00 before ' + p.install + ' (typical night ' + p.lowKw.toFixed(2) + ' to ' + p.highKw.toFixed(2) + ' kW). The meter had only the house on it, so this is the true base load.'));
+    }, function () {});
     n.appendChild(tile('Ticking over', r.baseKwhDay.toFixed(1) + ' kWh a day', (r.sharePct === null ? '' : r.sharePct + '% of ') + 'the ' + r.avgKwhDay.toFixed(1) + ' kWh a day the house uses'));
     var bars = $('blBars'); bars.textContent = ''; var mx = Math.max.apply(null, r.profile.filter(function (v) { return v !== null; }).concat([r.baseKw, 0.5]));
     r.profile.forEach(function (v, i) { var b = document.createElement('div'); b.style.cssText = 'flex:1;border-radius:2px 2px 0 0;background:var(--ours);opacity:.85;height:' + (v === null ? 0 : Math.max(2, v / mx * 100)) + '%'; b.title = (i < 20 ? '0' : '') + Math.floor(i / 2) + ':' + (i % 2 ? '30' : '00') + '  ' + (v === null ? 'no data' : v.toFixed(2) + ' kW'); bars.appendChild(b); });
