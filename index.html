@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '5d4fc538db', u = new URL(location.href);
+    var id = '39d6fb0866', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -530,7 +530,7 @@
     <button type="button" class="cog" id="cogBtn" aria-label="Settings" title="Settings">⚙️</button>
   </header>
   <div class="sub" id="verNote" hidden></div>
-  <nav class="tabs" role="tablist"><button role="tab" id="tabDash" aria-selected="true">Dashboard</button><button role="tab" id="tabLog" aria-selected="false">Daily log</button><button role="tab" id="tabAct" aria-selected="false">Activity</button><button role="tab" id="tabBr" aria-selected="false">Our software</button><button role="tab" id="tabTf" aria-selected="false">Tariffs</button><button role="tab" id="tabCar" aria-selected="false">Cars</button><button role="tab" id="tabSh" aria-selected="false">Summerhouse</button><button role="tab" id="tabSetup" aria-selected="false">Setup</button></nav>
+  <nav class="tabs" role="tablist"><button role="tab" id="tabDash" aria-selected="true">Dashboard</button><button role="tab" id="tabLog" aria-selected="false">Daily log</button><button role="tab" id="tabAct" aria-selected="false">Activity</button><button role="tab" id="tabBr" aria-selected="false" hidden>Our software</button><button role="tab" id="tabTf" aria-selected="false">Tariffs</button><button role="tab" id="tabCar" aria-selected="false">Cars</button><button role="tab" id="tabSh" aria-selected="false">Summerhouse</button><button role="tab" id="tabSetup" aria-selected="false">Setup</button></nav>
   <details class="about"><summary>About this page</summary><div class="sub">Solis AI keeps running the battery exactly as it is set up. Our software plans as if it were in charge, and each day we compare the two on the same real solar, house use and prices.</div></details>
   <div id="banners"></div>
 
@@ -571,7 +571,7 @@
     </div>
   </section>
 
-  <section aria-label="Plan">
+  <section aria-label="Plan" hidden>
     <h2>Next 24 hours: what our software would do</h2>
     <div class="sub" id="planSub">Not sent anywhere. This is the plan it would be following if it were in charge.</div>
     <div class="card" id="projCard" style="margin-top:10px" hidden></div>
@@ -582,7 +582,7 @@
     <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Import price</h2><div class="chart" id="chPrice"></div><details><summary>View the plan as a table</summary><div class="scroll" id="tblPlan"></div></details></div>
   </section>
 
-  <section aria-label="History">
+  <section aria-label="History" hidden>
     <h2>Finished days</h2>
     <div class="sub">Only complete days with good readings count towards the totals.</div>
     <div class="grid2" style="margin-top:10px">
@@ -609,7 +609,7 @@
     </div>
   </section>
 
-  <section aria-label="Long run">
+  <section aria-label="Long run" hidden>
     <h2>The long run</h2>
     <div class="sub" id="lrSum">Waiting for finished days.</div>
     <div class="card scroll" id="lrCard" hidden><table id="tblLong"></table><div class="sub" id="lrNote" style="margin-top:8px"></div></div>
@@ -652,7 +652,7 @@
   </div>
 
   <div id="viewBr" hidden>
-    <section aria-label="Our software">
+    <section aria-label="Our software" hidden>
       <h2>Our software</h2>
       <div class="sub">What our planner is doing right now and why, what it has learned from real data, what information is reaching it, and what has changed. It only reads; it controls nothing.</div>
       <div id="brMsg" class="banner" style="margin-top:10px" hidden></div>
@@ -750,7 +750,7 @@
   <button data-t="car" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg>Cars</button>
   <button data-t="more" aria-selected="false"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>More</button>
 </nav>
-<div class="sheet" id="moreSheet" hidden><button data-t="act">Activity</button><button data-t="br">Our software</button><button data-t="sh">Summerhouse</button><button data-t="setup">Setup</button><button id="themeBtn" type="button">Appearance</button></div>
+<div class="sheet" id="moreSheet" hidden><button data-t="act">Activity</button><button data-t="sh">Summerhouse</button><button data-t="setup">Setup</button><button id="themeBtn" type="button">Appearance</button></div>
 <div class="stbar" aria-hidden="true"></div>
 <div class="busy" id="busy" aria-hidden="true"></div>
 <div class="ptr" id="ptr">Pull down to refresh</div>
@@ -991,8 +991,8 @@
     var predSnap = false, predLate = false, plainNow = !T.past && T.gridP && T.projP, stored = null, standP = T.standingP || 0;
     var wearSrc = T.wearP, workSrc = T.workings, gsrcAll = T.gridP;
     // A day still going shows only Solis AI's real cost so far: grid power bought at the real rates plus the standing charge. The comparison with our software is worked out once the day has finished.
-    var solisOnly = !!plainNow; plainNow = false;
-    if (solisOnly) { PB = null; keys = ['solis']; upTo = T.endMs; cost = { solis: T.gridP.solis + standP }; stored = { solis: T.storedKwh.solis }; wearSrc = null; }
+    var solisOnly = !!(T.gridP && T.storedKwh); plainNow = false;
+    if (solisOnly) { PB = null; keys = ['solis']; upTo = T.endMs; cost = { solis: T.gridP.solis + standP }; stored = { solis: T.storedKwh.solis }; wearSrc = null; T = Object.assign({}, T, { paths: { actual: (T.paths || {}).actual } }); }
     // "Best" means the cheapest of the real contenders: Solis AI, ours and Predbat. Perfect hindsight is a benchmark that nobody could have run, so it is shown on its own and never counts as best.
     var cont = keys.filter(function (k) { return k === 'solis' || k === 'ours' || k === 'predbat'; }), base = Math.min.apply(null, cont.map(function (k) { return cost[k]; }));
     var order = keys.filter(function (k) { return k !== 'perfect'; }), hasPerfect = keys.indexOf('perfect') >= 0;
@@ -1018,7 +1018,7 @@
       bars.appendChild(el('div', { style: 'font-size:38px;font-weight:700;line-height:1.15;margin:2px 0 6px' }, gbp(cost.solis)));
       bars.appendChild(el('div', { class: 'sub' }, 'Grid power bought ' + fmt(T.importKwh, 1) + ' kWh at the real rates, plus the standing charge of ' + gbp(standP) + '. Up to ' + hhmm(upTo) + '.'));
       bars.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Battery now ' + fmt(stored.solis, 1) + ' kWh · solar made ' + fmt(T.pvKwh, 1) + ' kWh · house used ' + fmt(T.loadKwh, 1) + ' kWh'));
-      keys = ['solis', 'ours', 'plain', 'perfect'].filter(function (k) { return (T.paths[k === 'solis' ? 'actual' : k] || []).length; });   // the graph still shows every way of running the battery
+      keys = ['solis'];
     }
     else order.concat(hasPerfect ? ['perfect'] : []).forEach(function (k) {
       if (k === 'perfect') bars.appendChild(el('div', { class: 'sub', style: 'margin:10px 0 2px' }, 'Benchmark only: the whole day known in advance, which nobody could run.'));
@@ -1033,10 +1033,10 @@
     });
     if (plainNow && workSrc) { var W = workSrc; bars.appendChild(el('div', { class: 'sub', style: 'margin-top:8px' }, 'Workings: Solis really bought ' + fmt(W.realKwh, 1) + ' kWh (' + gbp(gsrcAll.solis) + '). The model prices Solis\'s battery path at ' + gbp(W.modelP.solis) + ' (' + fmt(W.modelKwh.solis, 1) + ' kWh bought). It prices ours at ' + gbp(W.modelP.ours) + ' (' + fmt(W.modelKwh.ours, 1) + ' kWh) and plain fill at ' + gbp(W.modelP.plain) + ' (' + fmt(W.modelKwh.plain, 1) + ' kWh). Ours = Solis real + (ours - Solis path) = ' + gbp(gsrcAll.ours) + '.')); }
     var d = cost.solis - cost.ours, was = T.past ? 'that day' : 'today';
-    if (solisOnly) { $('scoreNote').textContent = 'The comparison with our software is worked out once the day has finished, and appears on the Results tab and here for past days. The lines on the graph are what each way of running the battery would have done so far; the dotted line is our plan from now.'; } else if (live) $('scoreNote').textContent = ''; else $('scoreNote').textContent = (T.ok ? '' : 'Provisional: readings cover ' + Math.round((T.coverage || 0) * 100) + '% of ' + was + ' and saved forecasts ' + Math.round((T.forecastCoverage || 0) * 100) + '%. ') +
+    if (solisOnly) { $('scoreNote').textContent = 'The real cost: grid power bought at the real rates plus the standing charge.'; } else if (live) $('scoreNote').textContent = ''; else $('scoreNote').textContent = (T.ok ? '' : 'Provisional: readings cover ' + Math.round((T.coverage || 0) * 100) + '% of ' + was + ' and saved forecasts ' + Math.round((T.forecastCoverage || 0) * 100) + '%. ') +
       'Figures in brackets are the cost against the cheapest of ' + (PB ? 'Solis AI, ours and Predbat' : 'Solis AI and ours') + ', not against perfect hindsight (shown separately as a benchmark). ' + (T.past ? 'That day: ' : 'So far today: ') + (d >= 0 ? 'ours is ' + gbp(d) + ' cheaper than Solis AI.' : 'Solis AI is ' + gbp(-d) + ' cheaper than ours.') + (plainNow ? (predSnap ? ' Every run is cut at ' + hhmm(upTo) + ', the time of Predbat\'s latest answer (it reports about once an hour), so they all cover the same period.' : '') + ' Solis AI is the real grid cost up to ' + hhmm(upTo) + ' plus today\'s standing charge of ' + gbp(standP) + '. Ours and Predbat are that same real figure adjusted for the battery level each one reached: more stored means more grid energy at the rate it was charged, less means less, and any import not for the battery comes from the model. Where the battery levels match, the costs match. Wear is not counted.' : ' Money paid for grid power, up to ' + hhmm(upTo)) + (PB ? ' (Predbat updates about once an hour, so all the bars stop at the time of its latest answer).' : '.');
     var why = $('dayWhy'); clear(why); why.hidden = true;
-    if (T.past && !solisOnly) { try { var ex = explainDay(T, cost, stored); if (ex.length) { why.hidden = false; why.appendChild(el('b', null, 'Why the difference')); ex.forEach(function (s) { why.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, s)); }); } } catch (e) { /* explanation is optional */ } }
+    if (false) { try { var ex = explainDay(T, cost, stored); if (ex.length) { why.hidden = false; why.appendChild(el('b', null, 'Why the difference')); ex.forEach(function (s) { why.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, s)); }); } } catch (e) { /* explanation is optional */ } }
     $('todaySub').textContent = live ? 'Battery level so far today for each way of running it. Costs are compared once the day is finished.' : (solisOnly ? 'The real cost so far, and how each way of running the battery compares on the graph.' : (PB ? 'Five' : 'Four') + ' ways of running ' + dayLabel(T.date) + ', on the same real solar, house use and prices.') + (plainNow ? ' Costs are as at ' + hhmm(upTo) + (predSnap ? ', the time of Predbat\'s latest answer (the slowest source): every run is worked out up to that same moment.' : ', the latest half hour.') : '');
     var n = 49, xl = [], i; for (i = 0; i < n; i++) xl.push(hhmm(T.startMs + i * 1800e3));
     var ser = keys.map(function (k) { var p = k === 'predbat' ? PB.pathPct : (T.paths[k === 'solis' ? 'actual' : k] || []); var v = []; for (i = 0; i < n; i++) v.push(p[i] === undefined ? null : p[i]); return { name: NAMES[k].replace(/ \(.*\)/, ''), color: C[k], values: v }; });
@@ -1205,11 +1205,7 @@
 
   var logBench = 'cap'; try { logBench = localStorage.getItem('logBench') || 'cap'; } catch (e) { logBench = 'cap'; }
   function renderLog() {
-    var BENCH = [{ key: 'ours', f: 'ours_bill_p', name: 'Our plan (replayed)', note: 'our planner run on the same day with the forecasts it had at the time, starting from the real battery level at midnight, plus the standing charge' },
-      { key: 'predbat', f: 'predbat_bill_p', name: 'Predbat (replayed)', note: 'Predbat run on the same day, plus the standing charge' },
-      { key: 'plain', f: 'plain_bill_p', name: 'Plain self-use', note: 'battery charged only by solar, no cheap-rate charging' },
-      { key: 'perfect', f: 'perfect_bill_p', name: 'Perfect hindsight (benchmark)', note: 'the best that could have been done knowing the day in advance; not a fair target' },
-{ key: 'cap', f: 'cap_bill_p', name: 'Ofgem price cap', note: 'the house\'s own use bought at the Ofgem cap (26.32p a unit, 54.83p a day; no VAT until March 2027), no solar or battery' },
+    var BENCH = [{ key: 'cap', f: 'cap_bill_p', name: 'Ofgem price cap', note: 'the house\'s own use bought at the Ofgem cap (26.32p a unit, 54.83p a day; no VAT until March 2027), no solar or battery' },
       { key: 'fixed', f: 'fixed_bill_p', name: 'Best fixed rate', note: D.fixedLabel ? 'the house\'s own use at ' + D.fixedLabel : 'not set: add a rate in Setup under "Daily log comparison"' },
       { key: 'nosolar', f: 'nosolar_bill_p', name: 'Same tariff, no solar or battery', note: 'the house\'s own use bought from the grid at the same tariff that day, with no solar and no battery. Only days our own readings cover' }];
     var rows = (D.log || []).filter(function (r) { return r.actual_bill_p !== null; }), t = $('tblLog'); clear(t);
