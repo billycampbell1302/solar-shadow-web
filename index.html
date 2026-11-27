@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'cfa2749b1c', u = new URL(location.href);
+    var id = '5c281f1e8c', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -282,7 +282,7 @@
   .seg button { font:inherit; font-size:13.5px; padding:7px 14px; border:0; border-radius:9px; background:transparent; color:var(--ink2); cursor:pointer; white-space:nowrap; }
   .seg button[aria-selected="true"] { background:var(--surface); color:var(--ink); font-weight:650; box-shadow:0 1px 2px rgba(0,0,0,.12); }
   #viewDash[data-sel="today"] [data-pane]:not([data-pane="today"]), #viewDash[data-sel="plan"] [data-pane]:not([data-pane="plan"]),
-  #viewDash[data-sel="past"] [data-pane]:not([data-pane="past"]), #viewDash[data-sel="accuracy"] [data-pane]:not([data-pane="accuracy"]) { display:none; }
+  #viewDash[data-sel="solar"] [data-pane]:not([data-pane="solar"]), #viewDash[data-sel="accuracy"] [data-pane]:not([data-pane="accuracy"]) { display:none; }
   header .pills { display:flex; flex-wrap:wrap; gap:6px; width:100%; }
   .modebtn { margin-left:auto; font:inherit; font-size:12px; padding:2px 10px; border-radius:20px; border:1px solid var(--border); background:var(--surface); color:var(--ink2); cursor:pointer; }
   .modebtn b { color:var(--ink); }
@@ -580,6 +580,23 @@
       <div class="card"><h2 style="font-size:14px">Electricity price</h2><div class="chart" id="chPrice"></div></div>
     </div>
     <div class="card" style="margin-top:14px"><details><summary>View as a table</summary><div class="scroll" id="tblPlan"></div></details></div>
+  </section>
+
+  <section aria-label="Solar generation">
+    <h2>Solar generation</h2>
+    <div class="sub">Everything the solar prediction is built from and checked against: what each roof made, the weather the forecast expected against what really happened, and how well the roofs turned sunlight into power.</div>
+    <div class="daybar daypick" role="group" aria-label="Choose a day" style="margin-top:10px">
+      <button class="btn dstep" id="solPrev" aria-label="Previous day">&lsaquo;</button><input type="date" id="solDate" aria-label="Day to show"><button class="btn dstep" id="solNext" aria-label="Next day">&rsaquo;</button><button class="btn dtoday" id="solToday">Today</button><span class="sub" id="solMsg"></span>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card"><h2 style="font-size:14px">East and west roofs through the day</h2><div class="legend" id="solLegend1"></div><div class="chart" id="chSolRoofs"></div><div class="sub" id="solRoofNote" style="margin-top:6px"></div></div>
+      <div class="card"><h2 style="font-size:14px">Sunlight on the roofs: expected and real</h2><div class="legend" id="solLegend2"></div><div class="chart" id="chSolSun"></div><div class="sub" id="solSunNote" style="margin-top:6px"></div></div>
+    </div>
+    <div class="card scroll" style="margin-top:14px"><h2 style="font-size:14px">Day by day: where the forecast error comes from</h2><div class="sub" id="solDaysNote" style="margin-bottom:6px"></div><table id="tblSolDays"></table></div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="card"><h2 style="font-size:14px">What the model uses today</h2><div id="solModel"></div></div>
+      <div class="card"><h2 style="font-size:14px">What is being collected</h2><div id="solCapture"></div></div>
+    </div>
   </section>
 
   <section aria-label="History" hidden>
@@ -1165,6 +1182,58 @@
       tr.appendChild(bar); tr.appendChild(val); row.appendChild(nm); row.appendChild(tr); bars.appendChild(row);
     });
   }
+
+  // ---- Solar tab ----
+  var SOLD = null, solSel = '';
+  function solHalf(startMs) { var x = []; for (var i = 0; i < 48; i++) x.push(hhmm(startMs + i * 1800e3)); return x; }
+  function solLegend(host, items) { clear(host); items.forEach(function (it) { var s = el('span'); var i = el('i', { style: 'background:' + it[1] + (it[2] ? ';height:0;border-top:3px dotted ' + it[1] : '') }); s.appendChild(i); s.appendChild(document.createTextNode(it[0])); host.appendChild(s); }); }
+  function renderSolar(r) {
+    SOLD = r; var d = r.day || {}, x = solHalf(d.startMs || Date.now()), tk = [0, 8, 16, 24, 32, 40];
+    $('solDate').value = r.date; $('solMsg').textContent = '';
+    // roofs
+    var tot = d.pvKw || [], fc = d.pvFcKw || [];
+    solLegend($('solLegend1'), [['East roof', 'var(--ours)'], ['West roof', 'var(--solis)'], ['Solar made (total)', 'var(--plain)'], ['Forecast at the time', 'var(--ours)', 1]]);
+    var ser = [];
+    if (d.stringsFound) { ser.push({ name: 'East roof', color: 'var(--ours)', values: d.east }); ser.push({ name: 'West roof', color: 'var(--solis)', values: d.west }); }
+    ser.push({ name: 'Solar made (total)', color: 'var(--plain)', values: tot.length ? tot : x.map(function () { return null; }) });
+    if (fc.length) ser.push({ name: 'Forecast at the time', color: 'var(--ours)', dash: '2 4', values: fc });
+    lineChart($('chSolRoofs'), { x: x, series: ser, yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'Solar made by each roof', empty: 'No solar readings saved for this day.' });
+    var lim = (d.limited || []).reduce(function (a, b) { return a + b; }, 0);
+    $('solRoofNote').textContent = d.stringsFound ? (lim ? 'The inverter looked to be holding solar back for about ' + Math.round(lim / 6 * 10) / 10 + ' hours (battery full, nothing going to or from the grid), so the panels could have made more.' : 'Nothing suggests the inverter held solar back on this day.') : 'No separate east and west readings for this day yet. They are recorded from the newest version of the app onwards. If they stay empty after a day, the inverter is using different field names and the hourly raw copy will show them.';
+    // sunlight
+    var w = d.weather || {}, F = w.forecast || {}, A = w.actual, hx = []; for (var q = 0; q < 24; q++) hx.push(hhmm(Date.parse((w.date || r.date) + 'T' + String(q).padStart(2, '0') + ':00:00Z')));
+    var avg = function (a, b) { return a.map(function (v, i) { return v === null || v === undefined || b[i] === null || b[i] === undefined ? null : (v * 5.88 + b[i] * 4.9) / 10.78; }); };
+    var fS = F.gE ? avg(F.gW, F.gE) : null;
+    solLegend($('solLegend2'), [['Expected sunlight (made beforehand)', 'var(--ours)', 1], ['Real sunlight', 'var(--ours)'], ['Cloud, real', 'var(--axis)']]);
+    var ser2 = []; if (fS) ser2.push({ name: 'Expected sunlight', color: 'var(--ours)', dash: '2 4', values: fS });
+    if (A) { ser2.push({ name: 'Real sunlight', color: 'var(--ours)', values: avg(A.gW, A.gE) }); }
+    lineChart($('chSolSun'), { x: hx, series: ser2.length ? ser2 : [{ name: 'none', color: 'var(--ours)', values: hx.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 0) + ' W/m²'; }, xTickIdx: [0, 4, 8, 12, 16, 20], label: 'Sunlight on the roofs', empty: 'Waiting for the weather copy. The forecast side is saved every hour and the real side each morning, so a finished day shows both from tomorrow.' });
+    $('solSunNote').textContent = A ? 'Watts of sunlight per square metre on the roofs, averaged across both roofs by size. The gap between the dotted and solid lines is the weather forecast being wrong; it is not the roof model.' : (fS ? 'The real weather for this day is saved the next morning.' : '');
+    // days table
+    var days = r.days || [], rows = days.slice().reverse().map(function (y) {
+      var sunA = y.sunE === undefined || y.sunE === null ? null : (y.sunE * 4.9 + y.sunW * 5.88) / 10.78, sunF = y.fcSunE === null || y.fcSunE === undefined ? null : (y.fcSunE * 4.9 + y.fcSunW * 5.88) / 10.78;
+      var sErr = sunA && sunF !== null ? Math.round((sunF - sunA) / sunA * 100) : null, pErr = y.forecast > 0.5 ? Math.round((y.actual - y.forecast) / y.forecast * 100) : null;
+      return [dayLabel(y.date), fmt(y.actual, 1), fmt(y.forecast, 1), pErr === null ? '–' : (pErr > 0 ? '+' : '') + pErr + '%', y.east === null || y.east === undefined ? '–' : fmt(y.east, 1) + ' / ' + fmt(y.west, 1), sunA === null ? '–' : fmt(sunA, 2), sunF === null ? '–' : fmt(sunF, 2), sErr === null ? '–' : (sErr > 0 ? '+' : '') + sErr + '%', y.ratioPct === null || y.ratioPct === undefined ? '–' : y.ratioPct + '%'];
+    });
+    $('solDaysNote').textContent = days.length ? 'Solar made against forecast, then the same for the sunlight itself (kWh per square metre, whole day). If the sunlight error is large the weather was the problem; if the sunlight error is small but the solar error is large, the roof model is. The last column is how much of the possible power the roofs delivered, which also drops when the inverter holds solar back or on snow and frost.' : 'Needs a few finished days.';
+    if (rows.length) table($('tblSolDays'), ['Day', 'Made kWh', 'Forecast kWh', 'Solar error', 'East / west kWh', 'Sun made', 'Sun expected', 'Sun error', 'Roof yield'], rows); else clear($('tblSolDays'));
+    // model
+    var m = r.config || {}, M = $('solModel'); clear(M);
+    var line = function (a, b) { var q = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('span', null, a)); q.appendChild(el('span', { style: 'text-align:right' }, b)); M.appendChild(q); };
+    (m.arrays || []).forEach(function (a) { line(a.name.charAt(0).toUpperCase() + a.name.slice(1) + ' roof', fmt(a.kwp, 2) + ' kWp, tilted ' + a.tilt + '°, facing ' + (a.azimuth < 0 ? Math.abs(a.azimuth) + '° east of south' : a.azimuth + '° west of south')); });
+    line('Learned correction', fmt(m.cal, 3) + ' (from ' + m.calDays + ' days)'); line('Safety margin on the forecast', fmt(m.hedge, 2)); line('Tree shading allowance this month', fmt(m.shade, 2));
+    M.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, 'The east and west roof angles are still marked in the code as needing the installer to confirm them. Once east and west output is recorded, the data will show whether they are right.'));
+    // capture
+    var C = $('solCapture'); clear(C);
+    var nice = { PVDetail: 'Each roof, every reading', WeatherFc: 'Weather behind each forecast', WeatherActual: 'Real weather, each morning', RawHourly: 'Full inverter reply, hourly', PVCheck: 'Forecast against actual, every reading', SolcastSnaps: 'Solcast forecasts' };
+    (r.capture || []).forEach(function (c) { var q = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('span', null, nice[c.name] || c.name)); q.appendChild(el('span', { style: 'text-align:right' }, c.rows ? c.rows.toLocaleString('en-GB') + ' rows, since ' + new Date(c.from).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'nothing yet')); C.appendChild(q); });
+  }
+  function loadSolar(dt) { $('solMsg').textContent = 'Loading…'; gs('getSolarModel', [(window.__ACCESS__ || {}).key || '', dt || solSel || ''], renderSolar, function (e) { $('solMsg').textContent = 'Could not load: ' + e; }); }
+  function solShift(n) { var cur = (SOLD && SOLD.date) || $('solDate').value; if (!cur) return; var t = new Date(cur + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); solSel = t.toISOString().slice(0, 10); if (SOLD && solSel > SOLD.today) { solSel = SOLD.today; } loadSolar(solSel); }
+  $('solPrev').addEventListener('click', function () { solShift(-1); }); $('solNext').addEventListener('click', function () { solShift(1); });
+  $('solToday').addEventListener('click', function () { solSel = ''; loadSolar(''); });
+  $('solDate').addEventListener('change', function () { solSel = $('solDate').value; loadSolar(solSel); });
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.seg button'); if (b && b.textContent === 'Solar') loadSolar(solSel); });
   function renderPlan() {
     var P = D.plan || [], k = $('planKpis'); clear(k);
     if (!P.length) { ['chPlanPv', 'chPrice'].forEach(function (id) { clear($(id)); $(id).appendChild(el('div', { class: 'empty' }, 'The forecast appears after the first reading.')); }); return; }
@@ -2062,12 +2131,12 @@
   var dash = $('viewDash'), panes = [
     ['today', 'section[aria-label="Headline"], #kpis, section[aria-label="Today"]'],
     ['plan', 'section[aria-label="Plan"]'],
-    ['past', 'section[aria-label="History"], section[aria-label="Solar forecasts"]'],
-    ['accuracy', 'section[aria-label="Solar accuracy"], section[aria-label="Quality and learning"], section.how']
+    ['solar', 'section[aria-label="Solar generation"], section[aria-label="Solar forecasts"], section[aria-label="Solar accuracy"]'],
+    ['accuracy', 'section[aria-label="Base load"], section[aria-label="System losses"], section[aria-label="Quality and learning"], section.how']
   ];
   panes.forEach(function (p) { Array.prototype.forEach.call(dash.querySelectorAll(p[1]), function (e) { e.setAttribute('data-pane', p[0]); }); });
   var seg = document.createElement('div'); seg.className = 'seg'; seg.setAttribute('role', 'tablist'); seg.setAttribute('aria-label', 'Overview sections');
-  var segNames = { today: 'Today', plan: 'Next 24 hours', past: 'Past days', accuracy: 'How accurate' };
+  var segNames = { today: 'Today', plan: 'Next 24 hours', solar: 'Solar', accuracy: 'Data checks' };
   function selPane(k) {
     dash.setAttribute('data-sel', k);
     Array.prototype.forEach.call(seg.children, function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-k') === k)); });
@@ -2080,7 +2149,7 @@
     b.addEventListener('click', function () { selPane(p[0]); }); seg.appendChild(b);
   });
   dash.insertBefore(seg, dash.firstChild);
-  var start = 'today'; try { start = sessionStorage.getItem('pane') || 'today'; } catch (e) {}
+  var start = 'today'; try { start = sessionStorage.getItem('pane') || 'today'; } catch (e) {} if (!segNames[start]) start = 'today';
   if (mode === 'simple' && start === 'accuracy') start = 'today';
   selPane(start);
   // Simple / Full switch
@@ -2189,7 +2258,7 @@
     var key = document.createElement('div'); key.className = 'sub'; key.style.marginTop = '6px'; key.textContent = 'Grey bar = forecast, orange = what the panels made. Same half hours only, so a part day is fair.'; box.appendChild(key);
   }
   function load() { if (!window.__gs) return setTimeout(load, 800); window.__gs('getSolarAccuracy', [(window.__ACCESS__ || {}).key || ''], render, function (e) { var s = $('accSum'); if (s) s.textContent = 'Could not load: ' + e; }); }
-  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.seg button'); if (b && /accurate/i.test(b.textContent)) load(); });
+  document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.seg button'); if (b && /solar|accurate/i.test(b.textContent)) load(); });
   setTimeout(load, 1500);
 })();
 </script>
