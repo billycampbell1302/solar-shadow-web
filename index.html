@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '4bdd9c40ab', u = new URL(location.href);
+    var id = '4dcf63df15', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -2046,7 +2046,7 @@
       stat('Heater', L.heating === null ? 'Unknown' : L.heating ? 'Heating' : 'Not heating', L.power !== null ? Math.round(L.power) + ' W' : 'Not reported by the heater. Worked out from whether the room is warming faster than the weather alone would');
     } else stat('Inside now', '–', 'No readings yet. One is saved with each inverter read (every 10 minutes).');
     var ser = S.series || [], xs = ser.map(function (r) { return hhmm(r[0]); }), ticks = [], seen = {};
-    ser.forEach(function (r, i) { var h = Number(hhmm(r[0]).slice(0, 2)), m = Number(hhmm(r[0]).slice(3)); var step = (window.innerWidth || 800) < 560 ? 12 : 6, bk = Math.floor(r[0] / (step * 3600e3)); if (h % step === 0 && m < 10 && !seen[bk]) { seen[bk] = 1; ticks.push(i); } });
+    ser.forEach(function (r, i) { var h = Number(hhmm(r[0]).slice(0, 2)), m = Number(hhmm(r[0]).slice(3)); var step = (window.innerWidth || 800) < 560 ? 12 : 6, bk = Math.floor(r[0] / (step * 3600e3)); if (h % step === 0 && m < 10 && !seen[bk]) { seen[bk] = 1; ticks.push(i); xs[i] = (h < 10 ? '0' : '') + h + ':00'; } });
     $('shLegend').textContent = 'Inside (orange line) and outside (grey line), °C. Bars below: when the heater was heating.';
     lineChart($('chSh'), { x: xs, series: [{ name: 'Inside', color: C.ours, values: ser.map(function (r) { return r[1]; }) }, { name: 'Outside', color: C.plain, values: ser.map(function (r) { return r[2]; }) }], yFmt: function (v) { return Math.round(v) + '°'; }, xTickIdx: ticks, right: 0, empty: 'Appears once the first readings are in.', label: 'Summerhouse inside and outside temperature, last 48 hours' });
     var hs = $('shHeat'); clear(hs);
