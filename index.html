@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'd1f957e9e9', u = new URL(location.href);
+    var id = '4bdd9c40ab', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -2061,7 +2061,7 @@
     var days = S.firstT ? Math.max(0, (S.now - S.firstT) / 86400e3) : 0;
     li(S.samples > 100 ? 'good' : 'warn', 'Readings', S.samples + ' readings over ' + days.toFixed(1) + ' days (one every 10 minutes).');
     if (M.k) li('good', 'Heat loss', 'Each hour the room loses ' + Math.round((1 - Math.exp(-M.k)) * 100) + '% of the gap to the outside (it takes about ' + fmt(M.tauH, 1) + ' hours to lose two thirds of it).' + (M.usesDirection ? '' : M.usesWind ? ' Wind makes this worse: +' + fmt(M.kw / M.k * 100, 0) + '% for each m/s.' : ' No wind effect found yet.'));
-    else li('warn', 'Heat loss', 'Still learning. It needs cooling spells with the heater off (' + (M.nOff || 0) + ' of about 24 so far).');
+    else li('warn', 'Heat loss', 'Still learning. ' + (M.nOff || 0) + ' heater-off stretches found, but they do not yet give one clear cooling rate. It needs cleaner cold nights with the heater off all night.');
     if (M.k && M.usesDirection) { var worst = 0; M.kwq.forEach(function (v, i) { if (v > M.kwq[worst]) worst = i; }); li('good', 'Wind direction', 'Wind from the ' + COMPASS[worst] + ' chills it most (' + fmt(M.kwq[worst] / M.k * 100, 0) + '% extra loss per m/s), from the ' + COMPASS[M.kwq.indexOf(Math.min.apply(null, M.kwq))] + ' least.'); }
     else if (M.k) li('warn', 'Wind direction', 'Not separated yet. It needs windy spells from every direction, which takes several weeks.');
     if (M.k) li(M.usesRain ? 'good' : 'warn', 'Rain', M.usesRain ? 'Rain adds about ' + fmt(M.kr / M.k * 100, 0) + '% to the heat loss for each mm an hour.' : 'No clear rain effect found yet (needs wet spells with the heater off).');
