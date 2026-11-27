@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '65e9225636', u = new URL(location.href);
+    var id = 'da8f6fb028', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1225,9 +1225,9 @@
     var tl = $('solTiles'); clear(tl);
     [['All panels', tot, fc, true], ['East roof', d.east, d.eastFc, d.stringsFound], ['West roof', d.west, d.westFc, d.stringsFound]].forEach(function (z) {
       var allP = z[0] === 'All panels' && d.stringsFound, madeT = z[3] ? sumK(allP ? totR : z[1]) : null, bo = z[3] ? both(allP ? totR : z[1], z[2]) : null, whole = allP ? (sumK(d.eastFc) === null || sumK(d.westFc) === null ? sumK(z[2]) : sumK(d.eastFc) + sumK(d.westFc)) : sumK(z[2]), tile = el('div', { class: 'tile' });
-      tile.appendChild(el('div', { class: 'k' }, z[0])); tile.appendChild(el('div', { class: 'v' }, madeT === null ? '–' : fmt(madeT, 1) + ' kWh'));
+      tile.appendChild(el('div', { class: 'k' }, z[0])); tile.appendChild(el('div', { class: 'v' }, madeT === null ? '–' : fmt(madeT, 2) + ' kWh'));
       tile.appendChild(el('div', { class: 's' }, madeT === null ? 'no readings' : 'made so far'));
-      tile.appendChild(el('div', { class: 's' }, 'Forecast: ' + (whole === null ? '–' : fmt(whole, 1)) + ' for the day'));
+      tile.appendChild(el('div', { class: 's' }, 'Forecast: ' + (whole === null ? '–' : fmt(whole, 2)) + ' for the day'));
       if (z[0] === 'All panels') {
         var preM = 0; (tot || []).forEach(function (v, i) { var e0 = (d.east || [])[i], w0 = (d.west || [])[i]; if ((e0 === null || e0 === undefined || w0 === null || w0 === undefined) && v !== null && v !== undefined) preM += v * 0.5; });
         if (allP && preM > 0.05) tile.appendChild(el('div', { class: 's', style: 'margin-top:4px' }, 'East + West added up. Not counted here: ' + fmt(preM, 1) + ' kWh made before the roofs were recorded separately (inverter total only).'));
