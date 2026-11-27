@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '0f790f9426', u = new URL(location.href);
+    var id = 'd1f957e9e9', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -2067,6 +2067,7 @@
     if (M.k) li(M.usesRain ? 'good' : 'warn', 'Rain', M.usesRain ? 'Rain adds about ' + fmt(M.kr / M.k * 100, 0) + '% to the heat loss for each mm an hour.' : 'No clear rain effect found yet (needs wet spells with the heater off).');
     if (M.k) li(M.usesSun ? 'good' : 'warn', 'Sunshine', M.usesSun ? 'Bright sun (500 W/m²) warms the room by about ' + fmt(M.s * 500, 1) + '°C an hour.' : 'No clear sun effect found yet (needs more sunny days).');
     if (M.h) li('good', 'Heater', 'Warms the room by about ' + fmt(M.h, 1) + '°C an hour before losses.'); else li('warn', 'Heater', 'Still learning. It needs heating spells (' + (M.nOn || 0) + ' of about 12 so far).');
+    if (M.k && M.h) { var hkw = S.heaterKw || 2; li('good', 'Heat the room loses', 'About ' + fmt(hkw / M.h * M.k * 1000, 0) + ' W for each degree it is above the outside (no wind). From the heater (' + fmt(hkw, 1) + ' kW) warming it ' + fmt(M.h, 1) + '°C an hour before losses.'); }
     li(M.ready ? 'good' : 'warn', 'Confidence', M.ready ? 'Enough data for useful estimates. They keep improving through the winter as the weather changes.' : 'Not enough yet. Expect about two weeks, including some cold nights and some heated mornings.');
     var calc = $('shCalc'); calc.hidden = !(M.k && M.h);
     if (M.k && M.h) {
@@ -2079,6 +2080,8 @@
         if (b > a) { var mm = shTime(M, a, b, t, w, sn, true, dq, rn), ke = shKe(M, w, dq, rn), plat = t + (M.h + (M.s || 0) * sn) / ke; row('Warm-up from ' + a + '° to ' + b + '°: ' + shFmtMin(mm), 'With the heater on, at ' + t + '° outside, wind ' + w + ' m/s.' + (mm === null ? ' The heater alone levels off at about ' + plat.toFixed(1) + '°.' : '')); }
         else if (b < a) row('Cool-down from ' + a + '° to ' + b + '°: ' + shFmtMin(shTime(M, a, b, t, w, sn, false, dq, rn)), 'With the heater off, at ' + t + '° outside, wind ' + w + ' m/s from the ' + COMPASS[dq] + '.');
         else row('Already at the target', '');
+        var hkw2 = S.heaterKw || 2, ke2 = shKe(M, w, dq, rn);
+        if (M.h && b > t) { var perH = Math.max(0, ke2 * (b - t) - (M.s || 0) * sn), hold = hkw2 / M.h * perH * 24, capB = (typeof D !== 'undefined' && D && D.capKwh) || 14.4; row('Holding ' + b + '° all day: about ' + fmt(hold, 1) + ' kWh', 'Needs about ' + fmt(hold / 24 * 1000, 0) + ' W on average (the heater is ' + fmt(hkw2 * 1000, 0) + ' W) at ' + t + '° outside, wind ' + w + ' m/s. That is about ' + Math.round(hold / capB * 100) + '% of the battery. A heat pump would need roughly a third of this.'); }
       }
       calcOut();
     }
