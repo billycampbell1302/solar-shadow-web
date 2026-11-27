@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'da8f6fb028', u = new URL(location.href);
+    var id = '0f790f9426', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1831,7 +1831,7 @@
     var ec = el('div', { class: 'card tfcard', style: 'margin-top:10px' }), es = el('div', { class: 'scroll tft tftcur' });
     ec.appendChild(tfHead('☀️', 'Export deals'));
     var kwS = 0, kwA = 0; (mdl.months || []).slice(0, Math.min(hc, 12)).forEach(function (m) { var p = m[0].split('-'), dd = new Date(Date.UTC(+p[0], +p[1], 0)).getUTCDate(); kwS += m[2] * dd; kwA += (m[6] || 0) * dd; }); if (hc > 12) { kwS = kwS * hc / 12; kwA = kwA * hc / 12; }
-    ec.appendChild(el('div', { class: 'tfs' }, 'Income over ' + hc + ' months from about ' + Math.round(kwS) + ' kWh of spare solar and ' + Math.round(kwA) + ' kWh of battery selling at the evening peak. Limit ' + (mdl.cap || '–') + ' kWh a day. ' + (S.exportMode === 'estimated' ? 'Export is not approved yet, so this is modelled.' : 'Based on real exports.'))); ec.appendChild(es);
+    ec.appendChild(el('div', { class: 'tfs' }, 'Income over ' + hc + ' months from about ' + Math.round(kwS) + ' kWh of spare solar and ' + Math.round(kwA) + ' kWh of battery selling at the evening peak. ' + (mdl.cap ? 'Limit ' + mdl.cap + ' kWh a day. ' : 'No daily limit (6 kW power limit). ') + (S.exportMode === 'estimated' ? 'Export is not approved yet, so this is modelled.' : 'Based on real exports.'))); ec.appendChild(es);
     var erows = [['Your current: ' + (cur.exportName || 'none'), '', '', '', pounds(cp[1]), '–']];
     exAll.slice(0, 12).forEach(function (e) { var m = exM(e); erows.push([e.name, e.supplier || '', e.lowP === e.highP ? fmt(e.lowP, 1) + 'p' : fmt(e.avgP, 1) + 'p avg · ' + (e.peakP !== null && e.peakP !== undefined ? fmt(e.peakP, 1) + 'p peak' : fmt(e.highP, 1) + 'p high'), e.sid === 'any' ? 'Any import deal' : e.flux ? 'Their Flux import' : 'Their import deal', pounds(exVal(e)), (m >= 0 ? '+' : '-') + pounds(Math.abs(m)) + ' / m']); });
     table(es, ['Deal', 'Supplier', 'Price', 'Needs', 'Earns', 'Against current'], erows.map(function (r) { return r.length === 6 && r[1] === '' ? [r[0], '', '', '', r[4], r[5]] : r; }));
@@ -1865,7 +1865,7 @@
       ['Current deal', cur.name + (cur.fromOctopus ? ' (from your Octopus account)' : ' (typed in settings)')],
       ['House model', mdl.daysObserved + ' days recorded, ' + mdl.monthsReal + ' of 12 months real'],
       ['Price outlook', ck0() && SC === 'base' ? 'published by Octopus: ' + monthName(rawS.curKnown[0].ym) + ' ' + (rawS.curKnown[0].ratio >= 1 ? '+' : '') + fmt((rawS.curKnown[0].ratio - 1) * 100, 1) + '%' : stepM ? '+' + Math.round((lvlAt(12) - 1) * 100) + '% from ' + monthName(stepM) + (SC !== 'base' ? ' (what-if ' + (SC === '0' ? 'no rise' : '+' + SC + '%') + ')' : '') : 'no change'],
-      ['Export', (mdl.cap || '–') + ' kWh/day limit, ' + (S.exportMode === 'estimated' ? 'not approved, modelled' : 'real exports')],
+      ['Export', (mdl.cap ? mdl.cap + ' kWh/day limit' : 'no daily limit (6 kW power limit)') + ', ' + (S.exportMode === 'estimated' ? 'not approved, modelled' : 'real exports')],
       ['Battery selling', fmt(kwA, 0) + ' kWh over ' + hc + ' months, 90% round trip, 3p wear'],
       ['Electric cars', NC > 0 && mdl.carOpts ? NC + (NC === 1 ? ' car, ' : ' cars, ') + fmt(mdl.carOpts[NC], 1) + ' kWh a day' : 'none counted'],
       ['Deals priced', srcTxt || '–'],
