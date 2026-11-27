@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'c29fae8eda', u = new URL(location.href);
+    var id = 'a20bcf3392', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -590,8 +590,8 @@
     </div>
     <div class="card" style="margin-top:10px"><h2 style="font-size:14px">All panels: forecast against made</h2><div class="legend"><span><i style="background:var(--plain)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--plain);background:transparent;height:0"></i>Forecast made beforehand</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Blended forecast (testing)</span></div><div class="chart" id="chSolAll"></div><div class="sub" id="solAllNote" style="margin-top:6px"></div><div class="sub" id="solBlendNote" style="margin-top:4px"></div><div id="solTotals" style="margin-top:10px"></div><div id="solBlend" style="margin-top:8px"></div><div class="sub" id="solDayNotes" style="margin-top:4px"></div></div>
     <div class="grid2" style="margin-top:10px">
-      <div class="card"><h2 style="font-size:14px">East roof: forecast against made</h2><div class="legend"><span><i style="background:var(--ours)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolE"></div><div class="sub" id="solENote" style="margin-top:6px"></div></div>
-      <div class="card"><h2 style="font-size:14px">West roof: forecast against made</h2><div class="legend"><span><i style="background:var(--solis)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--solis);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolW"></div><div class="sub" id="solWNote" style="margin-top:6px"></div></div>
+      <div class="card"><h2 style="font-size:14px">East roof: forecast against made</h2><div class="legend" id="solLegE"></div><div class="chart" id="chSolE"></div><div class="sub" id="solENote" style="margin-top:6px"></div></div>
+      <div class="card"><h2 style="font-size:14px">West roof: forecast against made</h2><div class="legend" id="solLegW"></div><div class="chart" id="chSolW"></div><div class="sub" id="solWNote" style="margin-top:6px"></div></div>
     </div>
     <div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">East and west made, side by side</h2><div class="legend" id="solLegend1"></div><div class="chart" id="chSolRoofs"></div><div class="sub" id="solRoofNote" style="margin-top:6px"></div></div>
@@ -1215,11 +1215,14 @@
     // day totals: made against forecast, for all panels and each roof
     function sumK(a) { var s = 0, n = 0; (a || []).forEach(function (v) { if (v !== null && v !== undefined) { s += v * 0.5; n++; } }); return n ? s : null; }
     function both(m, f) { var a = 0, b = 0, n = 0; (m || []).forEach(function (v, i) { if (v !== null && v !== undefined && f && f[i] !== null && f[i] !== undefined) { a += v * 0.5; b += f[i] * 0.5; n++; } }); return n >= 4 ? [a, b] : null; }
-    var TR = [['All panels', tot, fc, true], ['East roof', d.east, d.eastFc, d.stringsFound], ['West roof', d.west, d.westFc, d.stringsFound], ['Blended (testing)', tot, d.blendFc, true]].map(function (z) {
+    var TR = [['All panels', tot, fc, true], ['East', d.east, d.eastFc, d.stringsFound], ['West', d.west, d.westFc, d.stringsFound], ['Blend (test)', tot, d.blendFc, true]].map(function (z) {
       var madeT = z[3] ? sumK(z[1]) : null, bo = z[3] ? both(z[1], z[2]) : null, whole = sumK(z[2]);
       return [z[0], madeT === null ? '–' : fmt(madeT, 1), bo ? fmt(bo[1], 1) : '–', bo && bo[1] > 0.2 ? (bo[0] >= bo[1] ? '+' : '-') + Math.abs(Math.round((bo[0] - bo[1]) / bo[1] * 100)) + '%' : '–', whole === null ? '–' : fmt(whole, 1)];
     });
-    var tbx = $('solTotals'); clear(tbx); table(tbx, ['Day totals (kWh)', 'Made', 'Forecast, same time', 'Miss', 'Forecast, whole day'], TR); tbx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Forecast lines start from the first half hour saved by the new version, so earlier parts of today stay blank. Whole day counts only half hours that have a forecast.'));
+    var tbx = $('solTotals'); clear(tbx); var gr = 'display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:4px 6px;font-size:12px;padding:4px 0;border-top:1px solid var(--grid);align-items:baseline';
+    tbx.appendChild(el('div', { class: 'sub', style: 'margin-bottom:4px' }, 'Day totals in kWh'));
+    [['', 'Made', 'Forecast same time', 'Miss', 'Forecast whole day']].concat(TR).forEach(function (rw, ri) { var g = el('div', { style: gr + (ri === 0 ? ';color:var(--muted);font-size:11px' : '') }); rw.forEach(function (c, ci) { g.appendChild(el(ci === 0 && ri > 0 ? 'b' : 'span', { style: ci ? 'text-align:right' : '' }, c)); }); tbx.appendChild(g); });
+    tbx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Forecast lines start from the first half hour saved by the new version, so earlier parts of today stay blank. Whole day counts only half hours that have a forecast.'));
     $('solBlendNote').textContent = r.date > r.today ? 'Tomorrow: forecast only. The lines are there ahead of the day and keep updating every half hour until each time has passed.' : (r.date === r.today ? 'Today: lines to the right of now are still being updated every half hour until each time has passed.' : '');
     var bx = $('solBlend'); clear(bx); var BH = (r.blend && r.blend.history) || [];
     if (BH.length) { var bl = BH[BH.length - 1], sc2 = [['Usual forecast', bl.om], ['Solcast', bl.sc], ['Weather-model ensemble', bl.ens], ['Blended (testing)', bl.blend]].filter(function (a) { return a[1] !== '' && a[1] !== null && a[1] !== undefined; });
@@ -1239,7 +1242,14 @@
     // each roof against its own forecast
     function roofChart(host, note, made, fcst, col, nm) {
       var ok = d.stringsFound || (fcst || []).some(function (v) { return v !== null; });
-      lineChart(host, { x: x, series: [{ name: nm + ' made', color: col, values: d.stringsFound ? made : x.map(function () { return null; }) }, { name: nm + ' forecast', color: col, dash: '2 4', values: fcst || x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: nm + ' roof, forecast against made', empty: 'Fills in as the roof readings and the hourly weather copy are saved.' });
+      // the same roof forecast seen through the blend and through Solcast: its own size and shading, the weather view of that feed
+      var fo = (d.feeds && d.feeds.om) || [], bf = d.blendFc || [], sf = (d.feeds && d.feeds.sc) || [];
+      function viewOf(f2) { return (fcst || []).map(function (v, i) { var o = fo[i], b = f2[i]; return v === null || v === undefined || o === null || o === undefined || b === null || b === undefined || o < 0.05 ? null : Math.round(v * Math.max(0, Math.min(3, b / o)) * 100) / 100; }); }
+      var bv = viewOf(bf), sv = viewOf(sf), ex = [];
+      if (bv.some(function (v) { return v !== null; })) ex.push({ name: nm + ' blended (testing)', color: 'var(--perfect)', dash: '5 3', values: bv });
+      if (sv.some(function (v) { return v !== null; })) ex.push({ name: nm + ' Solcast view', color: 'var(--axis)', dash: '1 4', values: sv });
+      solLegend($('solLeg' + nm[0]), [[nm + ' made', col], [nm + ' forecast made beforehand', col, 1]].concat(ex.map(function (e) { return [e.name.replace(nm + ' ', '').replace(/^./, function (c) { return c.toUpperCase(); }), e.color, 1]; })));
+      lineChart(host, { x: x, series: [{ name: nm + ' made', color: col, values: d.stringsFound ? made : x.map(function () { return null; }) }, { name: nm + ' forecast', color: col, dash: '2 4', values: fcst || x.map(function () { return null; }) }].concat(ex), yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: nm + ' roof, forecast against made', empty: 'Fills in as the roof readings and the hourly weather copy are saved.' });
       var a = 0, f = 0, n = 0; (made || []).forEach(function (v, i) { if (v !== null && fcst && fcst[i] !== null && fcst[i] !== undefined) { a += v * 0.5; f += fcst[i] * 0.5; n++; } });
       var est = ' Each roof has its own forecast: its size, its own sunlight and its own learned shading.';
       note.textContent = !d.stringsFound ? 'No separate ' + nm.toLowerCase() + ' roof readings yet, so only the forecast is shown.' + est : n >= 6 ? nm + ' made ' + fmt(a, 1) + ' kWh against ' + fmt(f, 1) + ' forecast over the same half hours (' + (f > 0.2 ? (a >= f ? '+' : '-') + Math.abs(Math.round((a - f) / f * 100)) + '%' : 'too little to compare') + '). The forecast is the weather copy saved at the time ' + est : (ok ? 'Not enough overlap yet to compare.' + est : '');
