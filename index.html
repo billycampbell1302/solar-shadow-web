@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '4835fa681f', u = new URL(location.href);
+    var id = '4f16776db3', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -595,6 +595,15 @@
     <div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">East and west roofs through the day</h2><div class="legend" id="solLegend1"></div><div class="chart" id="chSolRoofs"></div><div class="sub" id="solRoofNote" style="margin-top:6px"></div></div>
       <div class="card"><h2 style="font-size:14px">Sunlight on the roofs: expected and real</h2><div class="legend" id="solLegend2"></div><div class="chart" id="chSolSun"></div><div class="sub" id="solSunNote" style="margin-top:6px"></div></div>
+    </div>
+    <h2 style="font-size:14px;margin-top:18px">The rest of the weather</h2>
+    <div class="sub">Each line pair is the weather the forecast expected beforehand (dotted) and what really happened (solid). Cloud and rain cut solar; cold air makes panels slightly more efficient; wind cools them; damp air thins the sunlight.</div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card"><h2 style="font-size:14px">Cloud cover: expected and real</h2><div class="chart" id="chSolCloud"></div></div>
+      <div class="card"><h2 style="font-size:14px">Temperature: expected and real</h2><div class="chart" id="chSolTemp"></div></div>
+      <div class="card"><h2 style="font-size:14px">Wind: expected and real</h2><div class="chart" id="chSolWind"></div></div>
+      <div class="card"><h2 style="font-size:14px">Rain: expected and real</h2><div class="chart" id="chSolRain"></div></div>
+      <div class="card"><h2 style="font-size:14px">Humidity: expected and real</h2><div class="chart" id="chSolHum"></div></div>
     </div>
     <div class="card scroll" style="margin-top:14px"><h2 style="font-size:14px">Day by day: where the forecast error comes from</h2><div class="sub" id="solDaysNote" style="margin-bottom:6px"></div><table id="tblSolDays"></table></div>
     <div class="grid2" style="margin-top:14px">
@@ -1222,6 +1231,12 @@
     if (A) { ser2.push({ name: 'Real sunlight', color: 'var(--ours)', values: avg(A.gW, A.gE) }); }
     lineChart($('chSolSun'), { x: hx, series: ser2.length ? ser2 : [{ name: 'none', color: 'var(--ours)', values: hx.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 0) + ' W/m²'; }, xTickIdx: [0, 4, 8, 12, 16, 20], label: 'Sunlight on the roofs', empty: 'Waiting for the weather copy. The forecast side is saved every hour and the real side each morning, so a finished day shows both from tomorrow.' });
     $('solSunNote').textContent = A ? 'Watts of sunlight per square metre on the roofs, averaged across both roofs by size. The gap between the dotted and solid lines is the weather forecast being wrong; it is not the roof model.' : (fS ? 'The real weather for this day is saved the next morning.' : '');
+    // the rest of the weather
+    [['chSolCloud', 'cloud', '%', 0, 100, 'var(--axis)'], ['chSolTemp', 'temp', '°C', null, null, 'var(--solis)'], ['chSolWind', 'wind', ' m/s', 0, null, 'var(--ours)'], ['chSolRain', 'rain', ' mm', 0, null, 'var(--plain)'], ['chSolHum', 'hum', '%', 0, 100, 'var(--perfect)']].forEach(function (c) {
+      var s = []; if (F[c[1]] && F[c[1]].some(function (v) { return v !== null && v !== undefined; })) s.push({ name: 'Expected', color: c[5], dash: '2 4', values: F[c[1]] }); if (A && A[c[1]]) s.push({ name: 'Real', color: c[5], values: A[c[1]] });
+      var o2 = { x: hx, series: s.length ? s : [{ name: 'none', color: c[5], values: hx.map(function () { return null; }) }], yFmt: function (v) { return fmt(v, c[1] === 'rain' ? 1 : 0) + c[2]; }, xTickIdx: [0, 4, 8, 12, 16, 20], h: 150, label: c[1], empty: 'Fills in as the hourly weather copy is saved.' };
+      if (c[3] !== null) o2.yMin = c[3]; if (c[4] !== null) o2.yMax = c[4]; lineChart($(c[0]), o2);
+    });
     // days table
     var days = r.days || [], rows = days.slice().reverse().map(function (y) {
       var sunA = y.sunE === undefined || y.sunE === null ? null : (y.sunE * 4.9 + y.sunW * 5.88) / 10.78, sunF = y.fcSunE === null || y.fcSunE === undefined ? null : (y.fcSunE * 4.9 + y.fcSunW * 5.88) / 10.78;
