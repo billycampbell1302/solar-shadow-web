@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '60b128c31f', u = new URL(location.href);
+    var id = '97bb660c2d', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -584,20 +584,21 @@
 
   <section aria-label="Solar generation">
     <h2>Solar generation</h2>
-    <div class="sub">Everything the solar prediction is built from and checked against: what each roof made, the weather the forecast expected against what really happened, and how well the roofs turned sunlight into power.</div>
+    <div class="sub">What the panels made against what we forecast. Tap a group below for the detail behind it.</div>
     <div class="daybar daypick" role="group" aria-label="Choose a day" style="margin-top:10px">
       <button class="btn dstep" id="solPrev" aria-label="Previous day">&lsaquo;</button><input type="date" id="solDate" aria-label="Day to show"><button class="btn dstep" id="solNext" aria-label="Next day">&rsaquo;</button><button class="btn dtoday" id="solToday">Today</button><span class="sub" id="solMsg"></span>
     </div>
+    
+    <div id="solTiles" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px"></div>
     <div class="card" style="margin-top:10px"><h2 style="font-size:14px">All panels: forecast against made</h2><div class="legend"><span><i style="background:var(--plain)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--plain);background:transparent;height:0"></i>Forecast made beforehand</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Blended forecast (testing)</span></div><div class="chart" id="chSolAll"></div><div class="sub" id="solAllNote" style="margin-top:6px"></div><div class="sub" id="solBlendNote" style="margin-top:4px"></div><div id="solTotals" style="margin-top:10px"></div><div id="solBlend" style="margin-top:8px"></div><div class="sub" id="solDayNotes" style="margin-top:4px"></div></div>
-    <div class="grid2" style="margin-top:10px">
+    
+    <details class="setgrp solgrp"><summary>East and west roofs<span class="chip sub">each roof on its own</span></summary><div class="body"><div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">East roof: forecast against made</h2><div class="legend" id="solLegE"></div><div class="chart" id="chSolE"></div><div class="sub" id="solENote" style="margin-top:6px"></div></div>
       <div class="card"><h2 style="font-size:14px">West roof: forecast against made</h2><div class="legend" id="solLegW"></div><div class="chart" id="chSolW"></div><div class="sub" id="solWNote" style="margin-top:6px"></div></div>
     </div>
-    <div class="grid2" style="margin-top:10px">
-      <div class="card"><h2 style="font-size:14px">East and west made, side by side</h2><div class="legend" id="solLegend1"></div><div class="chart" id="chSolRoofs"></div><div class="sub" id="solRoofNote" style="margin-top:6px"></div></div>
-      <div class="card"><h2 style="font-size:14px">Sunlight on the roofs: expected and real</h2><div class="legend" id="solLegend2"></div><div class="chart" id="chSolSun"></div><div class="sub" id="solSunNote" style="margin-top:6px"></div></div>
-    </div>
-    <h2 style="font-size:14px;margin-top:18px">The rest of the weather</h2>
+    <div style="margin-top:10px"><div class="card"><h2 style="font-size:14px">East and west made, side by side</h2><div class="legend" id="solLegend1"></div><div class="chart" id="chSolRoofs"></div><div class="sub" id="solRoofNote" style="margin-top:6px"></div></div>
+      </div></div></details>
+    <details class="setgrp solgrp"><summary>Weather and sunlight<span class="chip sub">expected against real</span></summary><div class="body"><div class="card" style="margin-top:10px"><h2 style="font-size:14px">Sunlight on the roofs: expected and real</h2><div class="legend" id="solLegend2"></div><div class="chart" id="chSolSun"></div><div class="sub" id="solSunNote" style="margin-top:6px"></div></div><h2 style="font-size:14px;margin-top:18px">The rest of the weather</h2>
     <div class="sub">Each line pair is the weather the forecast expected beforehand (dotted) and what really happened (solid). Cloud and rain cut solar; cold air makes panels slightly more efficient; wind cools them; damp air thins the sunlight.</div>
     <div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">Cloud cover: expected and real</h2><div class="chart" id="chSolCloud"></div></div>
@@ -607,13 +608,15 @@
       <div class="card"><h2 style="font-size:14px">Humidity: expected and real</h2><div class="chart" id="chSolHum"></div></div>
     </div>
     <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Other weather models: sunshine expected</h2><div class="sub">Five forecasting models asked the same question. The more they disagree, the less sure we can be of the day.</div><div class="legend" id="solLegend3" style="margin-top:6px"></div><div class="chart" id="chSolModels"></div><div id="solModelScore" style="margin-top:8px"></div></div>
-    <div class="card" style="margin-top:14px"><h2 style="font-size:14px">What each roof has learned about its own shading</h2><div class="sub">Each roof's correction for each hour of the day. 1.0 means the roof makes what the sunlight forecast expects; lower means shade or losses at that hour; higher means it does better than expected.</div><div class="legend" id="solLegend4" style="margin-top:6px"></div><div class="chart" id="chSolShade"></div><div class="sub" id="solShadeNote" style="margin-top:6px"></div></div>
+    </div></details>
+    <details class="setgrp solgrp"><summary>What the forecast has learned<span class="chip sub">shading, days, data</span></summary><div class="body"><div class="card" style="margin-top:14px"><h2 style="font-size:14px">What each roof has learned about its own shading</h2><div class="sub">Each roof's correction for each hour of the day. 1.0 means the roof makes what the sunlight forecast expects; lower means shade or losses at that hour; higher means it does better than expected.</div><div class="legend" id="solLegend4" style="margin-top:6px"></div><div class="chart" id="chSolShade"></div><div class="sub" id="solShadeNote" style="margin-top:6px"></div></div>
     <div class="card scroll" style="margin-top:14px"><h2 style="font-size:14px">Day by day: where the forecast error comes from</h2><div class="sub" id="solDaysNote" style="margin-bottom:6px"></div><table id="tblSolDays"></table></div>
-    <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Notes</h2><div class="sub">Jot down anything that could change the solar: panels cleaned, snow, a tree cut, a power cut, a setting changed in the Solis app. It is saved against the day so odd days can be explained later.</div><div id="solNoteForm" style="margin-top:8px" hidden><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="solNoteText" maxlength="500" placeholder="What happened?" style="flex:1 1 220px;font:inherit;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn primary" type="button" id="solNoteAdd">Add note for this day</button></div></div><div id="solNotes" style="margin-top:8px"></div></div>
     <div class="grid2" style="margin-top:14px">
       <div class="card"><h2 style="font-size:14px">What the model uses today</h2><div id="solModel"></div></div>
       <div class="card"><h2 style="font-size:14px">What is being collected</h2><div id="solCapture"></div></div>
-    </div>
+    </div></div></details>
+    <details class="setgrp solgrp"><summary>Notes<span class="chip sub">your own log</span></summary><div class="body"><div class="card" style="margin-top:14px"><h2 style="font-size:14px">Notes</h2><div class="sub">Jot down anything that could change the solar: panels cleaned, snow, a tree cut, a power cut, a setting changed in the Solis app. It is saved against the day so odd days can be explained later.</div><div id="solNoteForm" style="margin-top:8px" hidden><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="solNoteText" maxlength="500" placeholder="What happened?" style="flex:1 1 220px;font:inherit;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn primary" type="button" id="solNoteAdd">Add note for this day</button></div></div><div id="solNotes" style="margin-top:8px"></div></div>
+    </div></details>
   </section>
 
   <section aria-label="History" hidden>
@@ -660,8 +663,7 @@
 
   <section aria-label="Solar accuracy">
     <h2>Solar forecast against actual</h2>
-    <div class="sub" id="accSum">Loading…</div>
-    <div class="card" style="margin-top:10px"><h2 style="font-size:14px" id="accDay">Half hour by half hour</h2><div class="legend"><span><i style="background:var(--ours)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chAccPv"></div></div>
+    <div class="sub" id="accSum">Loading…</div><div class="sub">The half-hour chart for any day is at the top of the Solar tab.</div>
     <div class="card scroll" style="margin-top:10px"><h2 style="font-size:14px">Day by day</h2><div id="accRows"></div></div>
   </section>
   <section aria-label="Quality and learning">
@@ -1165,7 +1167,7 @@
       tip: function (i) { return [{ name: 'Net cost', color: 'var(--solis)', value: cb[i] === null ? '–' : fmt(cb[i], 1) + 'p' }]; } });
     var cheap = pad(P.cheap).map(function (v) { return !!v; });
     lineChart($('chDayPow'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'House used', color: 'var(--solis)', values: pad(P.loadKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 240, label: 'Solar made and house used through the day' });
-    lineChart($('chAccPv'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 220, label: 'Solar made against the forecast' }); (function () { var a = 0, f = 0, nn = 0; for (var q = 0; q < P.pvKw.length; q++) { if (P.pvKw[q] === null || P.pvFcKw[q] === null || P.pvFcKw[q] === undefined) continue; a += P.pvKw[q] * 0.5; f += P.pvFcKw[q] * 0.5; nn++; } var ff = 0; for (var q2 = 0; q2 < P.pvFcKw.length; q2++) if (P.pvFcKw[q2]) ff += P.pvFcKw[q2] * 0.5; $('accDay').textContent = dayLabel(P.date) + (nn ? ': forecast ' + fmt(f, 1) + ' kWh, actual ' + fmt(a, 1) + ' kWh' + (f > 0.2 ? ' (' + Math.abs(Math.round((a - f) / f * 100)) + '% ' + (a >= f ? 'more' : 'less') + ' than forecast)' : '') : '') + (!P.fullDay && ff > f + 0.05 ? '. Whole day forecast: ' + fmt(ff, 1) + ' kWh' : ''); })();
+    if ($('chAccPv')) lineChart($('chAccPv'), { x: x, series: [{ name: 'Solar made', color: 'var(--ours)', values: pad(P.pvKw) }, { name: 'Solar forecast', color: 'var(--ours)', dash: '2 4', values: pad(P.pvFcKw) }], yMin: 0, shade: cheap, yFmt: function (v, t) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, h: 220, label: 'Solar made against the forecast' }); (function () { var a = 0, f = 0, nn = 0; for (var q = 0; q < P.pvKw.length; q++) { if (P.pvKw[q] === null || P.pvFcKw[q] === null || P.pvFcKw[q] === undefined) continue; a += P.pvKw[q] * 0.5; f += P.pvFcKw[q] * 0.5; nn++; } var ff = 0; for (var q2 = 0; q2 < P.pvFcKw.length; q2++) if (P.pvFcKw[q2]) ff += P.pvFcKw[q2] * 0.5; $('accDay').textContent = dayLabel(P.date) + (nn ? ': forecast ' + fmt(f, 1) + ' kWh, actual ' + fmt(a, 1) + ' kWh' + (f > 0.2 ? ' (' + Math.abs(Math.round((a - f) / f * 100)) + '% ' + (a >= f ? 'more' : 'less') + ' than forecast)' : '') : '') + (!P.fullDay && ff > f + 0.05 ? '. Whole day forecast: ' + fmt(ff, 1) + ' kWh' : ''); })();
     lineChart($('chDayPrice'), { x: x, series: [{ name: 'Pay per unit', color: 'var(--plain)', values: pad(P.impP) }, { name: 'Paid for export', color: 'var(--perfect)', values: pad(P.expP) }], yMin: 0, shade: cheap, yFmt: function (v) { return fmt(v, 1) + 'p'; }, xTickIdx: tk, h: 180, label: 'Import and export price' });
     var imp = pad(P.importKwh), exp = pad(P.exportKwh), ch = pad(P.chargeKwh), dis = pad(P.dischargeKwh);
     var net = imp.map(function (v, i) { return v === null ? null : v - (exp[i] || 0); });
@@ -1212,21 +1214,24 @@
     lineChart($('chSolAll'), { x: x, series: [{ name: 'Solar made', color: 'var(--plain)', values: tot.length ? tot : x.map(function () { return null; }) }, { name: 'Forecast made beforehand', color: 'var(--plain)', dash: '2 4', values: fc.length ? fc : x.map(function () { return null; }) }, { name: 'Blended forecast (testing)', color: 'var(--ours)', dash: '2 4', values: (d.blendFc && d.blendFc.length) ? d.blendFc : x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'All panels, forecast against made', empty: 'No solar readings saved for this day.' });
     var ta = 0, tf = 0, tn = 0; tot.forEach(function (v, i) { if (v !== null && fc[i] !== null && fc[i] !== undefined) { ta += v * 0.5; tf += fc[i] * 0.5; tn++; } });
     $('solAllNote').textContent = tn >= 6 ? 'Made ' + fmt(ta, 1) + ' kWh against ' + fmt(tf, 1) + ' forecast over the same half hours' + (tf > 0.2 ? ' (' + (ta >= tf ? '+' : '-') + Math.abs(Math.round((ta - tf) / tf * 100)) + '%)' : '') + '.' : '';
-    // day totals: made against forecast, for all panels and each roof
+    // day totals: made so far against forecast, for all panels and each roof
     function sumK(a) { var s = 0, n = 0; (a || []).forEach(function (v) { if (v !== null && v !== undefined) { s += v * 0.5; n++; } }); return n ? s : null; }
     function both(m, f) { var a = 0, b = 0, n = 0; (m || []).forEach(function (v, i) { if (v !== null && v !== undefined && f && f[i] !== null && f[i] !== undefined) { a += v * 0.5; b += f[i] * 0.5; n++; } }); return n >= 4 ? [a, b] : null; }
-    var TR = [['All panels', tot, fc, true], ['East', d.east, d.eastFc, d.stringsFound], ['West', d.west, d.westFc, d.stringsFound], ['East + West', (d.east || []).map(function (v, i) { var w2 = (d.west || [])[i]; return v === null || v === undefined || w2 === null || w2 === undefined ? null : v + w2; }), (d.eastFc || []).map(function (v, i) { var w2 = (d.westFc || [])[i]; return v === null || v === undefined || w2 === null || w2 === undefined ? null : v + w2; }), d.stringsFound], ['Blend (test)', tot, d.blendFc, true]].map(function (z) {
-      var madeT = z[3] ? sumK(z[1]) : null, bo = z[3] ? both(z[1], z[2]) : null, whole = sumK(z[2]);
-      return [z[0], madeT === null ? '–' : fmt(madeT, 1), bo ? fmt(bo[1], 1) : '–', bo && bo[1] > 0.2 ? (bo[0] >= bo[1] ? '+' : '-') + Math.abs(Math.round((bo[0] - bo[1]) / bo[1] * 100)) + '%' : '–', whole === null ? '–' : fmt(whole, 1)];
+    var tl = $('solTiles'); clear(tl);
+    [['All panels', tot, fc, true], ['East roof', d.east, d.eastFc, d.stringsFound], ['West roof', d.west, d.westFc, d.stringsFound]].forEach(function (z) {
+      var madeT = z[3] ? sumK(z[1]) : null, bo = z[3] ? both(z[1], z[2]) : null, whole = sumK(z[2]), tile = el('div', { class: 'tile' });
+      tile.appendChild(el('div', { class: 'k' }, z[0])); tile.appendChild(el('div', { class: 'v' }, madeT === null ? '–' : fmt(madeT, 1) + ' kWh'));
+      tile.appendChild(el('div', { class: 's' }, madeT === null ? 'no readings' : 'made so far'));
+      tile.appendChild(el('div', { class: 's' }, 'Forecast: ' + (whole === null ? '–' : fmt(whole, 1)) + ' for the day'));
+      tile.appendChild(el('div', { class: 's' }, bo && bo[1] > 0.2 ? 'So far ' + (bo[0] >= bo[1] ? '+' : '-') + Math.abs(Math.round((bo[0] - bo[1]) / bo[1] * 100)) + '% against forecast' : 'Not enough to compare yet'));
+      tl.appendChild(tile);
     });
-    var tbx = $('solTotals'); clear(tbx); var gr = 'display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:4px 6px;font-size:12px;padding:4px 0;border-top:1px solid var(--grid);align-items:baseline';
-    tbx.appendChild(el('div', { class: 'sub', style: 'margin-bottom:4px' }, 'Day totals in kWh'));
-    [['', 'Made', 'Forecast same time', 'Miss', 'Forecast whole day']].concat(TR).forEach(function (rw, ri) { var g = el('div', { style: gr + (ri === 0 ? ';color:var(--muted);font-size:11px' : '') }); rw.forEach(function (c, ci) { g.appendChild(el(ci === 0 && ri > 0 ? 'b' : 'span', { style: ci ? 'text-align:right' : '' }, c)); }); tbx.appendChild(g); });
+    var bwh = sumK(d.blendFc), bbo = both(tot, d.blendFc);
     var RCg = (r.config && r.config.roofCal) || {}, cfg = r.config || {};
-    function rcTxt(k) { var q = RCg[k]; if (!q) return k + ': none'; return k + ': ' + q.days + ' day' + (q.days === 1 ? '' : 's') + (q.days >= 3 && q.byHour && q.byHour.length === 24 ? ', own factors in use (at 11:00 ' + fmt(q.byHour[11], 2) + ', at 14:00 ' + fmt(q.byHour[14], 2) + ')' : ', using the shared factor'); }
-    tbx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Both roofs and the total start from the same sunlight and panel sizes. Shared correction factor ' + fmt(cfg.cal, 2) + ' (' + (cfg.calDays || 0) + ' days). Roof learning, ' + rcTxt('east') + '; ' + rcTxt('west') + '. If the two roofs do not add up to the total, a roof is using its own learned factor.'));
-    tbx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Forecast lines start from the first half hour saved by the new version, so earlier parts of today stay blank. Whole day counts only half hours that have a forecast.'));
-    $('solBlendNote').textContent = r.date > r.today ? 'Tomorrow: forecast only. The lines are there ahead of the day and keep updating every half hour until each time has passed.' : (r.date === r.today ? 'Today: lines to the right of now are still being updated every half hour until each time has passed.' : '');
+    function rcTxt(k) { var q = RCg[k]; if (!q) return k + ': none'; return k + ': ' + q.days + ' day' + (q.days === 1 ? '' : 's') + (q.days >= 3 && q.byHour && q.byHour.length === 24 ? ', own factors in use' : ', using the shared factor'); }
+    var blendLine = 'Blended (testing): ' + (bwh === null ? '–' : fmt(bwh, 1) + ' kWh for the day') + (bbo && bbo[1] > 0.2 ? ', ' + (bbo[0] >= bbo[1] ? '+' : '-') + Math.abs(Math.round((bbo[0] - bbo[1]) / bbo[1] * 100)) + '% so far' : '') + '. ';
+    var tbx = $('solTotals'); if (tbx) clear(tbx);
+    $('solBlendNote').textContent = blendLine + (r.date > r.today ? 'Tomorrow is forecast only; the lines update every half hour until each time has passed.' : (r.date === r.today ? 'Lines to the right of now keep updating every half hour until each time has passed.' : ''));
     var bx = $('solBlend'); clear(bx); var BH = (r.blend && r.blend.history) || [];
     if (BH.length) { var bl = BH[BH.length - 1], sc2 = [['Usual forecast', bl.om], ['Solcast', bl.sc], ['Weather-model ensemble', bl.ens], ['Blended (testing)', bl.blend]].filter(function (a) { return a[1] !== '' && a[1] !== null && a[1] !== undefined; });
       bx.appendChild(el('div', { class: 'sub' }, 'Blend scoreboard, ' + bl.days + ' day' + (bl.days === 1 ? '' : 's') + ' scored (average miss in kW three hours ahead, lower is better):'));
@@ -1280,7 +1285,7 @@
     var rcs = [['East', 'east', 'var(--ours)'], ['West', 'west', 'var(--solis)']].filter(function (c) { return RC[c[1]] && RC[c[1]].days >= 3 && RC[c[1]].byHour.length === 24; }).map(function (c) { return { name: c[0], color: c[2], values: RC[c[1]].byHour }; });
     solLegend($('solLegend4'), [['East roof', 'var(--ours)'], ['West roof', 'var(--solis)']]);
     lineChart($('chSolShade'), { x: hl, series: rcs.length ? rcs : [{ name: 'none', color: 'var(--ours)', values: hl.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 2); }, xTickIdx: [0, 4, 8, 12, 16, 20], h: 150, label: 'Learned correction by hour', empty: 'Each roof needs 3 days of its own readings first. Until then both use the whole-system figure.' });
-    $('solShadeNote').textContent = rcs.length ? 'Compare the two lines: a dip on one roof at certain hours is shade falling on that roof.' : '';
+    $('solShadeNote').textContent = 'Shared correction ' + fmt(cfg.cal, 2) + ' (' + (cfg.calDays || 0) + ' days). Roof learning, ' + rcTxt('east') + '; ' + rcTxt('west') + '. ' + (rcs.length ? 'Compare the two lines: a dip on one roof at certain hours is shade falling on that roof.' : '');
     // other weather models
     var MD = d.models || {}, mnames = Object.keys(MD), mcol = ['var(--ours)', 'var(--solis)', 'var(--plain)', 'var(--perfect)', 'var(--axis)'], nice = { best_match: 'Open-Meteo best', ukmo_seamless: 'UK Met Office', icon_seamless: 'ICON (Germany)', ecmwf_ifs025: 'ECMWF (Europe)', gfs_seamless: 'GFS (USA)' };
     var mser = mnames.map(function (m, i) { return { name: nice[m] || m, color: mcol[i % 5], dash: '2 4', values: MD[m].sw }; });
@@ -1314,6 +1319,7 @@
   }
   function loadSolar(dt) { $('solMsg').textContent = 'Loading…'; gs('getSolarModel', [(window.__ACCESS__ || {}).key || '', dt || solSel || ''], renderSolar, function (e) { $('solMsg').textContent = 'Could not load: ' + e; }); }
   function solShift(n) { var cur = (SOLD && SOLD.date) || $('solDate').value; if (!cur) return; var t = new Date(cur + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); solSel = t.toISOString().slice(0, 10); var cap = (SOLD && (SOLD.tomorrow || SOLD.today)); if (cap && solSel > cap) { solSel = cap; } loadSolar(solSel); }
+  Array.prototype.forEach.call(document.querySelectorAll('details.solgrp'), function (g) { g.addEventListener('toggle', function () { if (g.open && SOLD) renderSolar(SOLD); }); });   // charts are drawn to the width they have, so draw them again once a group is opened
   $('solPrev').addEventListener('click', function () { solShift(-1); }); $('solNext').addEventListener('click', function () { solShift(1); });
   $('solNoteAdd').addEventListener('click', function () { var t = $('solNoteText').value; if (!t.trim()) return; var b = $('solNoteAdd'); b.disabled = true; gs('noteAdd', [t, (SOLD && SOLD.date) || ''], function () { b.disabled = false; $('solNoteText').value = ''; loadSolar(solSel); }, function (e) { b.disabled = false; $('solMsg').textContent = 'Could not save: ' + e; }); });
   $('solToday').addEventListener('click', function () { solSel = ''; loadSolar(''); });
