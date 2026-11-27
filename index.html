@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '6a583d5ee5', u = new URL(location.href);
+    var id = 'e8383576c9', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1238,6 +1238,8 @@
       var best = sc2.reduce(function (m, a) { return (m === null || a[1] < m[1]) ? a : m; }, null);
       sc2.forEach(function (a) { var q = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('span', null, (best && a === best ? '★ ' : '') + a[0])); q.appendChild(el('span', null, fmt(Number(a[1]), 2) + ' kW')); bx.appendChild(q); });
       var wt = [['usual', bl.wom], ['Solcast', bl.wsc], ['ensemble', bl.wens]].filter(function (a) { return a[1] !== '' && a[1] !== null && a[1] !== undefined; }).map(function (a) { return a[0] + ' ' + Math.round(Number(a[1]) * 100) + '%'; }).join(', ');
+      var RW = (r.blend.state && r.blend.state.roof) || {};
+      ['east', 'west'].forEach(function (rk) { var q = RW[rk] && RW[rk].w; if (q) bx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, (rk === 'east' ? 'East' : 'West') + ' roof mix: usual ' + Math.round(q.om * 100) + '%, Solcast ' + Math.round(q.sc * 100) + '%, weather models ' + Math.round(q.ens * 100) + '%' + (RW[rk].score && RW[rk].score.nDays ? ' (' + RW[rk].score.nDays + ' day' + (RW[rk].score.nDays === 1 ? '' : 's') + ' scored)' : ' (starting mix, not scored yet)') + '.')); });
       if (wt) bx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Current mix: ' + wt + '. The planner keeps using the usual forecast until the blend has beaten it for a while.'));
     } else bx.appendChild(el('div', { class: 'sub' }, 'The blend is being tested in the background; its scoreboard appears after the first scored day.'));
     $('solDayNotes').textContent = (d.notes && d.notes.length) ? 'Your notes for this day: ' + d.notes.join(' / ') : '';
@@ -1250,10 +1252,7 @@
     // each roof against its own forecast
     function roofChart(host, note, made, fcst, col, nm) {
       var ok = d.stringsFound || (fcst || []).some(function (v) { return v !== null; });
-      // the same roof forecast seen through the blend and through Solcast: its own size and shading, the weather view of that feed
-      var fo = (d.feeds && d.feeds.om) || [], bf = d.blendFc || [], sf = (d.feeds && d.feeds.sc) || [];
-      function viewOf(f2) { return (fcst || []).map(function (v, i) { var o = fo[i], b = f2[i]; return v === null || v === undefined || o === null || o === undefined || b === null || b === undefined || o < 0.05 ? null : Math.round(v * Math.max(0, Math.min(3, b / o)) * 100) / 100; }); }
-      var bv = viewOf(bf), sv = viewOf(sf), ex = [];
+      var fd = (d[nm.toLowerCase() + 'Feeds']) || {}, bv = fd.blend || [], sv = fd.sc || [], ex = [];
       if (bv.some(function (v) { return v !== null; })) ex.push({ name: nm + ' blended (testing)', color: 'var(--perfect)', dash: '5 3', values: bv });
       if (sv.some(function (v) { return v !== null; })) ex.push({ name: nm + ' Solcast view', color: 'var(--axis)', dash: '1 4', values: sv });
       solLegend($('solLeg' + nm[0]), [[nm + ' made', col], [nm + ' forecast made beforehand', col, 1]].concat(ex.map(function (e) { return [e.name.replace(nm + ' ', '').replace(/^./, function (c) { return c.toUpperCase(); }), e.color, 1]; })));
