@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '6a2a4474ca', u = new URL(location.href);
+    var id = 'eab7e21ffd', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -607,6 +607,7 @@
       <div class="card"><h2 style="font-size:14px">Humidity: expected and real</h2><div class="chart" id="chSolHum"></div></div>
     </div>
     <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Other weather models: sunshine expected</h2><div class="sub">Five forecasting models asked the same question. The more they disagree, the less sure we can be of the day.</div><div class="legend" id="solLegend3" style="margin-top:6px"></div><div class="chart" id="chSolModels"></div><div id="solModelScore" style="margin-top:8px"></div></div>
+    <div class="card" style="margin-top:14px"><h2 style="font-size:14px">What each roof has learned about its own shading</h2><div class="sub">Each roof's correction for each hour of the day. 1.0 means the roof makes what the sunlight forecast expects; lower means shade or losses at that hour; higher means it does better than expected.</div><div class="legend" id="solLegend4" style="margin-top:6px"></div><div class="chart" id="chSolShade"></div><div class="sub" id="solShadeNote" style="margin-top:6px"></div></div>
     <div class="card scroll" style="margin-top:14px"><h2 style="font-size:14px">Day by day: where the forecast error comes from</h2><div class="sub" id="solDaysNote" style="margin-bottom:6px"></div><table id="tblSolDays"></table></div>
     <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Notes</h2><div class="sub">Jot down anything that could change the solar: panels cleaned, snow, a tree cut, a power cut, a setting changed in the Solis app. It is saved against the day so odd days can be explained later.</div><div id="solNoteForm" style="margin-top:8px" hidden><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="solNoteText" maxlength="500" placeholder="What happened?" style="flex:1 1 220px;font:inherit;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn primary" type="button" id="solNoteAdd">Add note for this day</button></div></div><div id="solNotes" style="margin-top:8px"></div></div>
     <div class="grid2" style="margin-top:14px">
@@ -1223,8 +1224,8 @@
       var ok = d.stringsFound || (fcst || []).some(function (v) { return v !== null; });
       lineChart(host, { x: x, series: [{ name: nm + ' made', color: col, values: d.stringsFound ? made : x.map(function () { return null; }) }, { name: nm + ' forecast', color: col, dash: '2 4', values: fcst || x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: nm + ' roof, forecast against made', empty: 'Fills in as the roof readings and the hourly weather copy are saved.' });
       var a = 0, f = 0, n = 0; (made || []).forEach(function (v, i) { if (v !== null && fcst && fcst[i] !== null && fcst[i] !== undefined) { a += v * 0.5; f += fcst[i] * 0.5; n++; } });
-      var est = d.roofFcEstimated ? ' Where the saved sunlight forecast is missing, the forecast line is the total forecast split between the roofs by where the sun is.' : '';
-      note.textContent = !d.stringsFound ? 'No separate ' + nm.toLowerCase() + ' roof readings yet, so only the forecast is shown.' + est : n >= 6 ? nm + ' made ' + fmt(a, 1) + ' kWh against ' + fmt(f, 1) + ' forecast over the same half hours (' + (f > 0.2 ? (a >= f ? '+' : '-') + Math.abs(Math.round((a - f) / f * 100)) + '%' : 'too little to compare') + '). The forecast is the weather copy saved at the time with today\'s learned correction.' + est : (ok ? 'Not enough overlap yet to compare.' + est : '');
+      var est = ' Each roof has its own forecast: its size, its own sunlight and its own learned shading.';
+      note.textContent = !d.stringsFound ? 'No separate ' + nm.toLowerCase() + ' roof readings yet, so only the forecast is shown.' + est : n >= 6 ? nm + ' made ' + fmt(a, 1) + ' kWh against ' + fmt(f, 1) + ' forecast over the same half hours (' + (f > 0.2 ? (a >= f ? '+' : '-') + Math.abs(Math.round((a - f) / f * 100)) + '%' : 'too little to compare') + '). The forecast is the weather copy saved at the time ' + est : (ok ? 'Not enough overlap yet to compare.' + est : '');
     }
     roofChart($('chSolE'), $('solENote'), d.east, d.eastFc, 'var(--ours)', 'East');
     roofChart($('chSolW'), $('solWNote'), d.west, d.westFc, 'var(--solis)', 'West');
@@ -1243,6 +1244,13 @@
       var o2 = { x: hx, series: s.length ? s : [{ name: 'none', color: c[5], values: hx.map(function () { return null; }) }], yFmt: function (v) { return fmt(v, c[1] === 'rain' ? 1 : 0) + c[2]; }, xTickIdx: [0, 4, 8, 12, 16, 20], h: 150, label: c[1], empty: 'Fills in as the hourly weather copy is saved.' };
       if (c[3] !== null) o2.yMin = c[3]; if (c[4] !== null) o2.yMax = c[4]; lineChart($(c[0]), o2);
     });
+    // what each roof has learned, by hour of day
+    var m0 = r.config || {};
+    var RC = m0.roofCal || {}, hl = []; for (var hq = 0; hq < 24; hq++) hl.push(String(hq).padStart(2, '0') + ':00');
+    var rcs = [['East', 'east', 'var(--ours)'], ['West', 'west', 'var(--solis)']].filter(function (c) { return RC[c[1]] && RC[c[1]].days >= 3 && RC[c[1]].byHour.length === 24; }).map(function (c) { return { name: c[0], color: c[2], values: RC[c[1]].byHour }; });
+    solLegend($('solLegend4'), [['East roof', 'var(--ours)'], ['West roof', 'var(--solis)']]);
+    lineChart($('chSolShade'), { x: hl, series: rcs.length ? rcs : [{ name: 'none', color: 'var(--ours)', values: hl.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 2); }, xTickIdx: [0, 4, 8, 12, 16, 20], h: 150, label: 'Learned correction by hour', empty: 'Each roof needs 3 days of its own readings first. Until then both use the whole-system figure.' });
+    $('solShadeNote').textContent = rcs.length ? 'Compare the two lines: a dip on one roof at certain hours is shade falling on that roof.' : '';
     // other weather models
     var MD = d.models || {}, mnames = Object.keys(MD), mcol = ['var(--ours)', 'var(--solis)', 'var(--plain)', 'var(--perfect)', 'var(--axis)'], nice = { best_match: 'Open-Meteo best', ukmo_seamless: 'UK Met Office', icon_seamless: 'ICON (Germany)', ecmwf_ifs025: 'ECMWF (Europe)', gfs_seamless: 'GFS (USA)' };
     var mser = mnames.map(function (m, i) { return { name: nice[m] || m, color: mcol[i % 5], dash: '2 4', values: MD[m].sw }; });
@@ -1266,7 +1274,8 @@
     var m = r.config || {}, M = $('solModel'); clear(M);
     var line = function (a, b) { var q = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('span', null, a)); q.appendChild(el('span', { style: 'text-align:right' }, b)); M.appendChild(q); };
     (m.arrays || []).forEach(function (a) { line(a.name.charAt(0).toUpperCase() + a.name.slice(1) + ' roof', fmt(a.kwp, 2) + ' kWp, tilted ' + a.tilt + '°, facing ' + (a.azimuth < 0 ? Math.abs(a.azimuth) + '° east of south' : a.azimuth + '° west of south')); });
-    line('Learned correction', fmt(m.cal, 3) + ' (from ' + m.calDays + ' days)'); line('Safety margin on the forecast', fmt(m.hedge, 2)); line('Tree shading allowance this month', fmt(m.shade, 2));
+    line('Learned correction (whole system)', fmt(m.cal, 3) + ' (from ' + m.calDays + ' days)');
+    ['east', 'west'].forEach(function (rn) { var rc = m.roofCal && m.roofCal[rn]; line(rn.charAt(0).toUpperCase() + rn.slice(1) + ' roof learned correction', rc && rc.days >= 3 ? fmt(rc.cal, 3) + ' (from ' + rc.days + ' days of its own readings)' : 'not yet: needs 3 days of its own readings, uses the whole-system figure until then'); }); line('Safety margin on the forecast', fmt(m.hedge, 2)); line('Tree shading allowance this month', fmt(m.shade, 2));
     M.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, 'The east and west roof angles are still marked in the code as needing the installer to confirm them. Once east and west output is recorded, the data will show whether they are right.'));
     // capture
     var C = $('solCapture'); clear(C);
