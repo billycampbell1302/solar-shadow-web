@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '6ddd483c9f', u = new URL(location.href);
+    var id = 'cfa2749b1c', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1475,7 +1475,7 @@
     if (!G) return;
     if (G.error) { $('gasMsg').textContent = 'Could not read the gas meter: ' + G.error; return; }
     var U = G.usage || {}, cur = G.current;
-    $('gasScan').hidden = !(TF && TF.owner);
+    $('gasScan').hidden = false;
     if (!U.days) { $('gasMsg').textContent = G.note || 'No complete days of gas readings yet.'; return; }
     var only = $('tfOnlyOk') ? $('tfOnlyOk').checked : true, deals = (G.deals || []).filter(function (d) { return !only || !d.blocked; });
     var mo = function (v) { return (v >= 0 ? '+' : '-') + pounds(Math.abs(v)) + ' / month'; };
@@ -1567,14 +1567,14 @@
   }
   $('tfScan').addEventListener('click', function () {
     var b = $('tfScan'); b.disabled = true; $('tfMsg').textContent = 'Starting the scan…'; var tok = ++tfPoll, t0 = Date.now(); window.__force = true;
-    gs('tariffScanStart', [], function (s) { if (s && s.state === 'fresh') { b.disabled = false; $('tfMsg').textContent = 'Already up to date: prices and your usage have not changed since the last scan.'; loadTf(); return; } tfWatch(tok, t0); }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan failed: ' + e; });
+    gs('tariffScanStart', [(window.__ACCESS__ || {}).key || ''], function (s) { if (s && s.state === 'fresh') { b.disabled = false; $('tfMsg').textContent = 'Already up to date: prices and your usage have not changed since the last scan.'; loadTf(); return; } tfWatch(tok, t0); }, function (e) { b.disabled = false; $('tfMsg').textContent = 'Scan failed: ' + e; });
   });
   function pounds(p, sign) { var v = Math.abs(p) / 100; return (sign ? (p > 0 ? '+' : p < 0 ? '-' : '') : (p < 0 ? '-' : '')) + '£' + v.toFixed(2); }
   var TFMODE = 'own';
   function tfHead(icon, text) { var h = el('h2', { class: 'tfh' }); h.appendChild(el('span', { class: 'tfi' }, icon)); h.appendChild(document.createTextNode(text)); return h; }
   function renderTf() {
     var out = $('tfOut'); clear(out); if (!TF) return;
-    $('tfScan').hidden = !TF.owner;
+    $('tfScan').hidden = false;
     var S = TF.scan;
     (function () {
       var lt = $('tfLast'); if (!lt) return;
@@ -1582,7 +1582,7 @@
       var when = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(S.made)), mins = Math.round((Date.now() - S.made) / 60000);
       lt.textContent = 'Last scan: ' + when + ' (' + (mins < 60 ? mins + ' min' : mins < 2880 ? Math.round(mins / 60) + ' h' : Math.round(mins / 1440) + ' days') + ' ago)' + (S.seconds ? ', took ' + S.seconds + 's' : '') + (S.build ? ', build ' + S.build : ', before build 119: scan again');
     })();
-    if (!S) { out.appendChild(el('div', { class: 'empty' }, TF.owner ? 'No scan yet. Press "Scan deals now".' : 'No scan yet. The owner needs to run one.')); return; }
+    if (!S) { out.appendChild(el('div', { class: 'empty' }, 'No scan yet. Press "Scan deals now".')); return; }
     if (!(S.v >= 3)) { out.appendChild(el('div', { class: 'card', style: 'margin-top:10px;border-color:var(--ours)' }, 'This scan was made before the 12, 18 and 24 month comparison, the export pairing and the filter for deals we cannot get. ' + (TF.owner ? 'Press "Scan deals now" to get the full picture.' : 'The owner needs to scan again.'))); return; }
     // what-if price rise: swap in the projections computed for that rise (no spread, one clear number)
     var SC = window.TFSCEN || 'base', rawS = S, carDef = (S.model && S.model.carsDefault) || 0, NC = window.TFCARS === undefined || window.TFCARS === null ? carDef : window.TFCARS;
