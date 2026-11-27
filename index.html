@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '5c281f1e8c', u = new URL(location.href);
+    var id = '4835fa681f', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -587,6 +587,10 @@
     <div class="sub">Everything the solar prediction is built from and checked against: what each roof made, the weather the forecast expected against what really happened, and how well the roofs turned sunlight into power.</div>
     <div class="daybar daypick" role="group" aria-label="Choose a day" style="margin-top:10px">
       <button class="btn dstep" id="solPrev" aria-label="Previous day">&lsaquo;</button><input type="date" id="solDate" aria-label="Day to show"><button class="btn dstep" id="solNext" aria-label="Next day">&rsaquo;</button><button class="btn dtoday" id="solToday">Today</button><span class="sub" id="solMsg"></span>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <div class="card"><h2 style="font-size:14px">East roof: forecast against made</h2><div class="legend"><span><i style="background:var(--ours)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolE"></div><div class="sub" id="solENote" style="margin-top:6px"></div></div>
+      <div class="card"><h2 style="font-size:14px">West roof: forecast against made</h2><div class="legend"><span><i style="background:var(--solis)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--solis);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolW"></div><div class="sub" id="solWNote" style="margin-top:6px"></div></div>
     </div>
     <div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">East and west roofs through the day</h2><div class="legend" id="solLegend1"></div><div class="chart" id="chSolRoofs"></div><div class="sub" id="solRoofNote" style="margin-top:6px"></div></div>
@@ -1200,6 +1204,15 @@
     lineChart($('chSolRoofs'), { x: x, series: ser, yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'Solar made by each roof', empty: 'No solar readings saved for this day.' });
     var lim = (d.limited || []).reduce(function (a, b) { return a + b; }, 0);
     $('solRoofNote').textContent = d.stringsFound ? (lim ? 'The inverter looked to be holding solar back for about ' + Math.round(lim / 6 * 10) / 10 + ' hours (battery full, nothing going to or from the grid), so the panels could have made more.' : 'Nothing suggests the inverter held solar back on this day.') : 'No separate east and west readings for this day yet. They are recorded from the newest version of the app onwards. If they stay empty after a day, the inverter is using different field names and the hourly raw copy will show them.';
+    // each roof against its own forecast
+    function roofChart(host, note, made, fcst, col, nm) {
+      var ok = d.stringsFound || (fcst || []).some(function (v) { return v !== null; });
+      lineChart(host, { x: x, series: [{ name: nm + ' made', color: col, values: d.stringsFound ? made : x.map(function () { return null; }) }, { name: nm + ' forecast', color: col, dash: '2 4', values: fcst || x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: nm + ' roof, forecast against made', empty: 'Fills in as the roof readings and the hourly weather copy are saved.' });
+      var a = 0, f = 0, n = 0; (made || []).forEach(function (v, i) { if (v !== null && fcst && fcst[i] !== null && fcst[i] !== undefined) { a += v * 0.5; f += fcst[i] * 0.5; n++; } });
+      note.textContent = n >= 6 ? nm + ' made ' + fmt(a, 1) + ' kWh against ' + fmt(f, 1) + ' forecast over the same half hours (' + (f > 0.2 ? (a >= f ? '+' : '-') + Math.abs(Math.round((a - f) / f * 100)) + '%' : 'too little to compare') + '). The forecast is the weather copy saved at the time with today\'s learned correction.' : (ok ? 'Not enough overlap yet to compare.' : '');
+    }
+    roofChart($('chSolE'), $('solENote'), d.east, d.eastFc, 'var(--ours)', 'East');
+    roofChart($('chSolW'), $('solWNote'), d.west, d.westFc, 'var(--solis)', 'West');
     // sunlight
     var w = d.weather || {}, F = w.forecast || {}, A = w.actual, hx = []; for (var q = 0; q < 24; q++) hx.push(hhmm(Date.parse((w.date || r.date) + 'T' + String(q).padStart(2, '0') + ':00:00Z')));
     var avg = function (a, b) { return a.map(function (v, i) { return v === null || v === undefined || b[i] === null || b[i] === undefined ? null : (v * 5.88 + b[i] * 4.9) / 10.78; }); };
