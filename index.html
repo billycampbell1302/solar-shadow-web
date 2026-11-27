@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'a20bcf3392', u = new URL(location.href);
+    var id = '60b128c31f', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1215,13 +1215,16 @@
     // day totals: made against forecast, for all panels and each roof
     function sumK(a) { var s = 0, n = 0; (a || []).forEach(function (v) { if (v !== null && v !== undefined) { s += v * 0.5; n++; } }); return n ? s : null; }
     function both(m, f) { var a = 0, b = 0, n = 0; (m || []).forEach(function (v, i) { if (v !== null && v !== undefined && f && f[i] !== null && f[i] !== undefined) { a += v * 0.5; b += f[i] * 0.5; n++; } }); return n >= 4 ? [a, b] : null; }
-    var TR = [['All panels', tot, fc, true], ['East', d.east, d.eastFc, d.stringsFound], ['West', d.west, d.westFc, d.stringsFound], ['Blend (test)', tot, d.blendFc, true]].map(function (z) {
+    var TR = [['All panels', tot, fc, true], ['East', d.east, d.eastFc, d.stringsFound], ['West', d.west, d.westFc, d.stringsFound], ['East + West', (d.east || []).map(function (v, i) { var w2 = (d.west || [])[i]; return v === null || v === undefined || w2 === null || w2 === undefined ? null : v + w2; }), (d.eastFc || []).map(function (v, i) { var w2 = (d.westFc || [])[i]; return v === null || v === undefined || w2 === null || w2 === undefined ? null : v + w2; }), d.stringsFound], ['Blend (test)', tot, d.blendFc, true]].map(function (z) {
       var madeT = z[3] ? sumK(z[1]) : null, bo = z[3] ? both(z[1], z[2]) : null, whole = sumK(z[2]);
       return [z[0], madeT === null ? '–' : fmt(madeT, 1), bo ? fmt(bo[1], 1) : '–', bo && bo[1] > 0.2 ? (bo[0] >= bo[1] ? '+' : '-') + Math.abs(Math.round((bo[0] - bo[1]) / bo[1] * 100)) + '%' : '–', whole === null ? '–' : fmt(whole, 1)];
     });
     var tbx = $('solTotals'); clear(tbx); var gr = 'display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr 1fr;gap:4px 6px;font-size:12px;padding:4px 0;border-top:1px solid var(--grid);align-items:baseline';
     tbx.appendChild(el('div', { class: 'sub', style: 'margin-bottom:4px' }, 'Day totals in kWh'));
     [['', 'Made', 'Forecast same time', 'Miss', 'Forecast whole day']].concat(TR).forEach(function (rw, ri) { var g = el('div', { style: gr + (ri === 0 ? ';color:var(--muted);font-size:11px' : '') }); rw.forEach(function (c, ci) { g.appendChild(el(ci === 0 && ri > 0 ? 'b' : 'span', { style: ci ? 'text-align:right' : '' }, c)); }); tbx.appendChild(g); });
+    var RCg = (r.config && r.config.roofCal) || {}, cfg = r.config || {};
+    function rcTxt(k) { var q = RCg[k]; if (!q) return k + ': none'; return k + ': ' + q.days + ' day' + (q.days === 1 ? '' : 's') + (q.days >= 3 && q.byHour && q.byHour.length === 24 ? ', own factors in use (at 11:00 ' + fmt(q.byHour[11], 2) + ', at 14:00 ' + fmt(q.byHour[14], 2) + ')' : ', using the shared factor'); }
+    tbx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Both roofs and the total start from the same sunlight and panel sizes. Shared correction factor ' + fmt(cfg.cal, 2) + ' (' + (cfg.calDays || 0) + ' days). Roof learning, ' + rcTxt('east') + '; ' + rcTxt('west') + '. If the two roofs do not add up to the total, a roof is using its own learned factor.'));
     tbx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Forecast lines start from the first half hour saved by the new version, so earlier parts of today stay blank. Whole day counts only half hours that have a forecast.'));
     $('solBlendNote').textContent = r.date > r.today ? 'Tomorrow: forecast only. The lines are there ahead of the day and keep updating every half hour until each time has passed.' : (r.date === r.today ? 'Today: lines to the right of now are still being updated every half hour until each time has passed.' : '');
     var bx = $('solBlend'); clear(bx); var BH = (r.blend && r.blend.history) || [];
