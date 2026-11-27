@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'eab7e21ffd', u = new URL(location.href);
+    var id = 'fe003babe2', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -588,7 +588,7 @@
     <div class="daybar daypick" role="group" aria-label="Choose a day" style="margin-top:10px">
       <button class="btn dstep" id="solPrev" aria-label="Previous day">&lsaquo;</button><input type="date" id="solDate" aria-label="Day to show"><button class="btn dstep" id="solNext" aria-label="Next day">&rsaquo;</button><button class="btn dtoday" id="solToday">Today</button><span class="sub" id="solMsg"></span>
     </div>
-    <div class="card" style="margin-top:10px"><h2 style="font-size:14px">All panels: forecast against made</h2><div class="legend"><span><i style="background:var(--plain)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--plain);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolAll"></div><div class="sub" id="solAllNote" style="margin-top:6px"></div><div class="sub" id="solDayNotes" style="margin-top:4px"></div></div>
+    <div class="card" style="margin-top:10px"><h2 style="font-size:14px">All panels: forecast against made</h2><div class="legend"><span><i style="background:var(--plain)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--plain);background:transparent;height:0"></i>Forecast made beforehand</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Blended forecast (testing)</span></div><div class="chart" id="chSolAll"></div><div class="sub" id="solAllNote" style="margin-top:6px"></div><div class="sub" id="solBlendNote" style="margin-top:4px"></div><div id="solBlend" style="margin-top:8px"></div><div class="sub" id="solDayNotes" style="margin-top:4px"></div></div>
     <div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">East roof: forecast against made</h2><div class="legend"><span><i style="background:var(--ours)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolE"></div><div class="sub" id="solENote" style="margin-top:6px"></div></div>
       <div class="card"><h2 style="font-size:14px">West roof: forecast against made</h2><div class="legend"><span><i style="background:var(--solis)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--solis);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolW"></div><div class="sub" id="solWNote" style="margin-top:6px"></div></div>
@@ -1209,9 +1209,18 @@
     $('solDate').value = r.date; $('solMsg').textContent = '';
     // all panels: the same two lines as the main forecast chart
     var tot = d.pvKw || [], fc = d.pvFcKw || [];
-    lineChart($('chSolAll'), { x: x, series: [{ name: 'Solar made', color: 'var(--plain)', values: tot.length ? tot : x.map(function () { return null; }) }, { name: 'Forecast made beforehand', color: 'var(--plain)', dash: '2 4', values: fc.length ? fc : x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'All panels, forecast against made', empty: 'No solar readings saved for this day.' });
+    lineChart($('chSolAll'), { x: x, series: [{ name: 'Solar made', color: 'var(--plain)', values: tot.length ? tot : x.map(function () { return null; }) }, { name: 'Forecast made beforehand', color: 'var(--plain)', dash: '2 4', values: fc.length ? fc : x.map(function () { return null; }) }, { name: 'Blended forecast (testing)', color: 'var(--ours)', dash: '2 4', values: (d.blendFc && d.blendFc.length) ? d.blendFc : x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'All panels, forecast against made', empty: 'No solar readings saved for this day.' });
     var ta = 0, tf = 0, tn = 0; tot.forEach(function (v, i) { if (v !== null && fc[i] !== null && fc[i] !== undefined) { ta += v * 0.5; tf += fc[i] * 0.5; tn++; } });
     $('solAllNote').textContent = tn >= 6 ? 'Made ' + fmt(ta, 1) + ' kWh against ' + fmt(tf, 1) + ' forecast over the same half hours' + (tf > 0.2 ? ' (' + (ta >= tf ? '+' : '-') + Math.abs(Math.round((ta - tf) / tf * 100)) + '%)' : '') + '.' : '';
+    $('solBlendNote').textContent = r.date > r.today ? 'Tomorrow: forecast only. The lines are there ahead of the day and keep updating every half hour until each time has passed.' : (r.date === r.today ? 'Today: lines to the right of now are still being updated every half hour until each time has passed.' : '');
+    var bx = $('solBlend'); clear(bx); var BH = (r.blend && r.blend.history) || [];
+    if (BH.length) { var bl = BH[BH.length - 1], sc2 = [['Usual forecast', bl.om], ['Solcast', bl.sc], ['Weather-model ensemble', bl.ens], ['Blended (testing)', bl.blend]].filter(function (a) { return a[1] !== '' && a[1] !== null && a[1] !== undefined; });
+      bx.appendChild(el('div', { class: 'sub' }, 'Blend scoreboard, ' + bl.days + ' day' + (bl.days === 1 ? '' : 's') + ' scored (average miss in kW three hours ahead, lower is better):'));
+      var best = sc2.reduce(function (m, a) { return (m === null || a[1] < m[1]) ? a : m; }, null);
+      sc2.forEach(function (a) { var q = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('span', null, (best && a === best ? '★ ' : '') + a[0])); q.appendChild(el('span', null, fmt(Number(a[1]), 2) + ' kW')); bx.appendChild(q); });
+      var wt = [['usual', bl.wom], ['Solcast', bl.wsc], ['ensemble', bl.wens]].filter(function (a) { return a[1] !== '' && a[1] !== null && a[1] !== undefined; }).map(function (a) { return a[0] + ' ' + Math.round(Number(a[1]) * 100) + '%'; }).join(', ');
+      if (wt) bx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Current mix: ' + wt + '. The planner keeps using the usual forecast until the blend has beaten it for a while.'));
+    } else bx.appendChild(el('div', { class: 'sub' }, 'The blend is being tested in the background; its scoreboard appears after the first scored day.'));
     $('solDayNotes').textContent = (d.notes && d.notes.length) ? 'Your notes for this day: ' + d.notes.join(' / ') : '';
     solLegend($('solLegend1'), [['East roof', 'var(--ours)'], ['West roof', 'var(--solis)']]);
     var ser = [];
@@ -1283,7 +1292,7 @@
     (r.capture || []).forEach(function (c) { var q = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('span', null, nice[c.name] || c.name)); q.appendChild(el('span', { style: 'text-align:right' }, c.rows ? c.rows.toLocaleString('en-GB') + ' rows, since ' + new Date(c.from).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'nothing yet')); C.appendChild(q); });
   }
   function loadSolar(dt) { $('solMsg').textContent = 'Loading…'; gs('getSolarModel', [(window.__ACCESS__ || {}).key || '', dt || solSel || ''], renderSolar, function (e) { $('solMsg').textContent = 'Could not load: ' + e; }); }
-  function solShift(n) { var cur = (SOLD && SOLD.date) || $('solDate').value; if (!cur) return; var t = new Date(cur + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); solSel = t.toISOString().slice(0, 10); if (SOLD && solSel > SOLD.today) { solSel = SOLD.today; } loadSolar(solSel); }
+  function solShift(n) { var cur = (SOLD && SOLD.date) || $('solDate').value; if (!cur) return; var t = new Date(cur + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); solSel = t.toISOString().slice(0, 10); var cap = (SOLD && (SOLD.tomorrow || SOLD.today)); if (cap && solSel > cap) { solSel = cap; } loadSolar(solSel); }
   $('solPrev').addEventListener('click', function () { solShift(-1); }); $('solNext').addEventListener('click', function () { solShift(1); });
   $('solNoteAdd').addEventListener('click', function () { var t = $('solNoteText').value; if (!t.trim()) return; var b = $('solNoteAdd'); b.disabled = true; gs('noteAdd', [t, (SOLD && SOLD.date) || ''], function () { b.disabled = false; $('solNoteText').value = ''; loadSolar(solSel); }, function (e) { b.disabled = false; $('solMsg').textContent = 'Could not save: ' + e; }); });
   $('solToday').addEventListener('click', function () { solSel = ''; loadSolar(''); });
