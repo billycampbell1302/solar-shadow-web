@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = 'fe003babe2', u = new URL(location.href);
+    var id = 'c29fae8eda', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -588,7 +588,7 @@
     <div class="daybar daypick" role="group" aria-label="Choose a day" style="margin-top:10px">
       <button class="btn dstep" id="solPrev" aria-label="Previous day">&lsaquo;</button><input type="date" id="solDate" aria-label="Day to show"><button class="btn dstep" id="solNext" aria-label="Next day">&rsaquo;</button><button class="btn dtoday" id="solToday">Today</button><span class="sub" id="solMsg"></span>
     </div>
-    <div class="card" style="margin-top:10px"><h2 style="font-size:14px">All panels: forecast against made</h2><div class="legend"><span><i style="background:var(--plain)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--plain);background:transparent;height:0"></i>Forecast made beforehand</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Blended forecast (testing)</span></div><div class="chart" id="chSolAll"></div><div class="sub" id="solAllNote" style="margin-top:6px"></div><div class="sub" id="solBlendNote" style="margin-top:4px"></div><div id="solBlend" style="margin-top:8px"></div><div class="sub" id="solDayNotes" style="margin-top:4px"></div></div>
+    <div class="card" style="margin-top:10px"><h2 style="font-size:14px">All panels: forecast against made</h2><div class="legend"><span><i style="background:var(--plain)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--plain);background:transparent;height:0"></i>Forecast made beforehand</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Blended forecast (testing)</span></div><div class="chart" id="chSolAll"></div><div class="sub" id="solAllNote" style="margin-top:6px"></div><div class="sub" id="solBlendNote" style="margin-top:4px"></div><div id="solTotals" style="margin-top:10px"></div><div id="solBlend" style="margin-top:8px"></div><div class="sub" id="solDayNotes" style="margin-top:4px"></div></div>
     <div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">East roof: forecast against made</h2><div class="legend"><span><i style="background:var(--ours)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolE"></div><div class="sub" id="solENote" style="margin-top:6px"></div></div>
       <div class="card"><h2 style="font-size:14px">West roof: forecast against made</h2><div class="legend"><span><i style="background:var(--solis)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--solis);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolW"></div><div class="sub" id="solWNote" style="margin-top:6px"></div></div>
@@ -1212,6 +1212,14 @@
     lineChart($('chSolAll'), { x: x, series: [{ name: 'Solar made', color: 'var(--plain)', values: tot.length ? tot : x.map(function () { return null; }) }, { name: 'Forecast made beforehand', color: 'var(--plain)', dash: '2 4', values: fc.length ? fc : x.map(function () { return null; }) }, { name: 'Blended forecast (testing)', color: 'var(--ours)', dash: '2 4', values: (d.blendFc && d.blendFc.length) ? d.blendFc : x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'All panels, forecast against made', empty: 'No solar readings saved for this day.' });
     var ta = 0, tf = 0, tn = 0; tot.forEach(function (v, i) { if (v !== null && fc[i] !== null && fc[i] !== undefined) { ta += v * 0.5; tf += fc[i] * 0.5; tn++; } });
     $('solAllNote').textContent = tn >= 6 ? 'Made ' + fmt(ta, 1) + ' kWh against ' + fmt(tf, 1) + ' forecast over the same half hours' + (tf > 0.2 ? ' (' + (ta >= tf ? '+' : '-') + Math.abs(Math.round((ta - tf) / tf * 100)) + '%)' : '') + '.' : '';
+    // day totals: made against forecast, for all panels and each roof
+    function sumK(a) { var s = 0, n = 0; (a || []).forEach(function (v) { if (v !== null && v !== undefined) { s += v * 0.5; n++; } }); return n ? s : null; }
+    function both(m, f) { var a = 0, b = 0, n = 0; (m || []).forEach(function (v, i) { if (v !== null && v !== undefined && f && f[i] !== null && f[i] !== undefined) { a += v * 0.5; b += f[i] * 0.5; n++; } }); return n >= 4 ? [a, b] : null; }
+    var TR = [['All panels', tot, fc, true], ['East roof', d.east, d.eastFc, d.stringsFound], ['West roof', d.west, d.westFc, d.stringsFound], ['Blended (testing)', tot, d.blendFc, true]].map(function (z) {
+      var madeT = z[3] ? sumK(z[1]) : null, bo = z[3] ? both(z[1], z[2]) : null, whole = sumK(z[2]);
+      return [z[0], madeT === null ? '–' : fmt(madeT, 1), bo ? fmt(bo[1], 1) : '–', bo && bo[1] > 0.2 ? (bo[0] >= bo[1] ? '+' : '-') + Math.abs(Math.round((bo[0] - bo[1]) / bo[1] * 100)) + '%' : '–', whole === null ? '–' : fmt(whole, 1)];
+    });
+    var tbx = $('solTotals'); clear(tbx); table(tbx, ['Day totals (kWh)', 'Made', 'Forecast, same time', 'Miss', 'Forecast, whole day'], TR); tbx.appendChild(el('div', { class: 'sub', style: 'margin-top:4px' }, 'Forecast lines start from the first half hour saved by the new version, so earlier parts of today stay blank. Whole day counts only half hours that have a forecast.'));
     $('solBlendNote').textContent = r.date > r.today ? 'Tomorrow: forecast only. The lines are there ahead of the day and keep updating every half hour until each time has passed.' : (r.date === r.today ? 'Today: lines to the right of now are still being updated every half hour until each time has passed.' : '');
     var bx = $('solBlend'); clear(bx); var BH = (r.blend && r.blend.history) || [];
     if (BH.length) { var bl = BH[BH.length - 1], sc2 = [['Usual forecast', bl.om], ['Solcast', bl.sc], ['Weather-model ensemble', bl.ens], ['Blended (testing)', bl.blend]].filter(function (a) { return a[1] !== '' && a[1] !== null && a[1] !== undefined; });
