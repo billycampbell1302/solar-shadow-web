@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '014581468f', u = new URL(location.href);
+    var id = '6a2a4474ca', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -588,12 +588,13 @@
     <div class="daybar daypick" role="group" aria-label="Choose a day" style="margin-top:10px">
       <button class="btn dstep" id="solPrev" aria-label="Previous day">&lsaquo;</button><input type="date" id="solDate" aria-label="Day to show"><button class="btn dstep" id="solNext" aria-label="Next day">&rsaquo;</button><button class="btn dtoday" id="solToday">Today</button><span class="sub" id="solMsg"></span>
     </div>
+    <div class="card" style="margin-top:10px"><h2 style="font-size:14px">All panels: forecast against made</h2><div class="legend"><span><i style="background:var(--plain)"></i>Solar made</span><span><i class="dot" style="border-top:3px dotted var(--plain);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolAll"></div><div class="sub" id="solAllNote" style="margin-top:6px"></div><div class="sub" id="solDayNotes" style="margin-top:4px"></div></div>
     <div class="grid2" style="margin-top:10px">
       <div class="card"><h2 style="font-size:14px">East roof: forecast against made</h2><div class="legend"><span><i style="background:var(--ours)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--ours);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolE"></div><div class="sub" id="solENote" style="margin-top:6px"></div></div>
       <div class="card"><h2 style="font-size:14px">West roof: forecast against made</h2><div class="legend"><span><i style="background:var(--solis)"></i>Made</span><span><i class="dot" style="border-top:3px dotted var(--solis);background:transparent;height:0"></i>Forecast made beforehand</span></div><div class="chart" id="chSolW"></div><div class="sub" id="solWNote" style="margin-top:6px"></div></div>
     </div>
     <div class="grid2" style="margin-top:10px">
-      <div class="card"><h2 style="font-size:14px">East and west roofs through the day</h2><div class="legend" id="solLegend1"></div><div class="chart" id="chSolRoofs"></div><div class="sub" id="solRoofNote" style="margin-top:6px"></div></div>
+      <div class="card"><h2 style="font-size:14px">East and west made, side by side</h2><div class="legend" id="solLegend1"></div><div class="chart" id="chSolRoofs"></div><div class="sub" id="solRoofNote" style="margin-top:6px"></div></div>
       <div class="card"><h2 style="font-size:14px">Sunlight on the roofs: expected and real</h2><div class="legend" id="solLegend2"></div><div class="chart" id="chSolSun"></div><div class="sub" id="solSunNote" style="margin-top:6px"></div></div>
     </div>
     <h2 style="font-size:14px;margin-top:18px">The rest of the weather</h2>
@@ -605,7 +606,9 @@
       <div class="card"><h2 style="font-size:14px">Rain: expected and real</h2><div class="chart" id="chSolRain"></div></div>
       <div class="card"><h2 style="font-size:14px">Humidity: expected and real</h2><div class="chart" id="chSolHum"></div></div>
     </div>
+    <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Other weather models: sunshine expected</h2><div class="sub">Five forecasting models asked the same question. The more they disagree, the less sure we can be of the day.</div><div class="legend" id="solLegend3" style="margin-top:6px"></div><div class="chart" id="chSolModels"></div><div id="solModelScore" style="margin-top:8px"></div></div>
     <div class="card scroll" style="margin-top:14px"><h2 style="font-size:14px">Day by day: where the forecast error comes from</h2><div class="sub" id="solDaysNote" style="margin-bottom:6px"></div><table id="tblSolDays"></table></div>
+    <div class="card" style="margin-top:14px"><h2 style="font-size:14px">Notes</h2><div class="sub">Jot down anything that could change the solar: panels cleaned, snow, a tree cut, a power cut, a setting changed in the Solis app. It is saved against the day so odd days can be explained later.</div><div id="solNoteForm" style="margin-top:8px" hidden><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="text" id="solNoteText" maxlength="500" placeholder="What happened?" style="flex:1 1 220px;font:inherit;padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink)"><button class="btn primary" type="button" id="solNoteAdd">Add note for this day</button></div></div><div id="solNotes" style="margin-top:8px"></div></div>
     <div class="grid2" style="margin-top:14px">
       <div class="card"><h2 style="font-size:14px">What the model uses today</h2><div id="solModel"></div></div>
       <div class="card"><h2 style="font-size:14px">What is being collected</h2><div id="solCapture"></div></div>
@@ -1203,22 +1206,25 @@
   function renderSolar(r) {
     SOLD = r; var d = r.day || {}, x = solHalf(d.startMs || Date.now()), tk = [0, 8, 16, 24, 32, 40];
     $('solDate').value = r.date; $('solMsg').textContent = '';
-    // roofs
+    // all panels: the same two lines as the main forecast chart
     var tot = d.pvKw || [], fc = d.pvFcKw || [];
-    solLegend($('solLegend1'), [['East roof', 'var(--ours)'], ['West roof', 'var(--solis)'], ['Solar made (total)', 'var(--plain)'], ['Forecast at the time', 'var(--ours)', 1]]);
+    lineChart($('chSolAll'), { x: x, series: [{ name: 'Solar made', color: 'var(--plain)', values: tot.length ? tot : x.map(function () { return null; }) }, { name: 'Forecast made beforehand', color: 'var(--plain)', dash: '2 4', values: fc.length ? fc : x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'All panels, forecast against made', empty: 'No solar readings saved for this day.' });
+    var ta = 0, tf = 0, tn = 0; tot.forEach(function (v, i) { if (v !== null && fc[i] !== null && fc[i] !== undefined) { ta += v * 0.5; tf += fc[i] * 0.5; tn++; } });
+    $('solAllNote').textContent = tn >= 6 ? 'Made ' + fmt(ta, 1) + ' kWh against ' + fmt(tf, 1) + ' forecast over the same half hours' + (tf > 0.2 ? ' (' + (ta >= tf ? '+' : '-') + Math.abs(Math.round((ta - tf) / tf * 100)) + '%)' : '') + '.' : '';
+    $('solDayNotes').textContent = (d.notes && d.notes.length) ? 'Your notes for this day: ' + d.notes.join(' / ') : '';
+    solLegend($('solLegend1'), [['East roof', 'var(--ours)'], ['West roof', 'var(--solis)']]);
     var ser = [];
     if (d.stringsFound) { ser.push({ name: 'East roof', color: 'var(--ours)', values: d.east }); ser.push({ name: 'West roof', color: 'var(--solis)', values: d.west }); }
-    ser.push({ name: 'Solar made (total)', color: 'var(--plain)', values: tot.length ? tot : x.map(function () { return null; }) });
-    if (fc.length) ser.push({ name: 'Forecast at the time', color: 'var(--ours)', dash: '2 4', values: fc });
-    lineChart($('chSolRoofs'), { x: x, series: ser, yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'Solar made by each roof', empty: 'No solar readings saved for this day.' });
-    var lim = (d.limited || []).reduce(function (a, b) { return a + b; }, 0);
-    $('solRoofNote').textContent = d.stringsFound ? (lim ? 'The inverter looked to be holding solar back for about ' + Math.round(lim / 6 * 10) / 10 + ' hours (battery full, nothing going to or from the grid), so the panels could have made more.' : 'Nothing suggests the inverter held solar back on this day.') : 'No separate east and west readings for this day yet. They are recorded from the newest version of the app onwards. If they stay empty after a day, the inverter is using different field names and the hourly raw copy will show them.';
+    lineChart($('chSolRoofs'), { x: x, series: ser.length ? ser : [{ name: 'none', color: 'var(--ours)', values: x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'Solar made by each roof', empty: 'No separate east and west readings for this day yet.' });
+    var lim = (d.limited || []).reduce(function (a2, b2) { return a2 + b2; }, 0);
+    $('solRoofNote').textContent = d.stringsFound ? (lim ? 'The inverter looked to be holding solar back for about ' + Math.round(lim / 6 * 10) / 10 + ' hours (battery full, nothing going to or from the grid), so the panels could have made more.' : 'Nothing suggests the inverter held solar back on this day.') : 'East and west readings are recorded from the newest version of the app onwards. If they stay empty after a day, the inverter is using different field names and the hourly raw copy will show them.';
     // each roof against its own forecast
     function roofChart(host, note, made, fcst, col, nm) {
       var ok = d.stringsFound || (fcst || []).some(function (v) { return v !== null; });
       lineChart(host, { x: x, series: [{ name: nm + ' made', color: col, values: d.stringsFound ? made : x.map(function () { return null; }) }, { name: nm + ' forecast', color: col, dash: '2 4', values: fcst || x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: nm + ' roof, forecast against made', empty: 'Fills in as the roof readings and the hourly weather copy are saved.' });
       var a = 0, f = 0, n = 0; (made || []).forEach(function (v, i) { if (v !== null && fcst && fcst[i] !== null && fcst[i] !== undefined) { a += v * 0.5; f += fcst[i] * 0.5; n++; } });
-      note.textContent = n >= 6 ? nm + ' made ' + fmt(a, 1) + ' kWh against ' + fmt(f, 1) + ' forecast over the same half hours (' + (f > 0.2 ? (a >= f ? '+' : '-') + Math.abs(Math.round((a - f) / f * 100)) + '%' : 'too little to compare') + '). The forecast is the weather copy saved at the time with today\'s learned correction.' : (ok ? 'Not enough overlap yet to compare.' : '');
+      var est = d.roofFcEstimated ? ' Where the saved sunlight forecast is missing, the forecast line is the total forecast split between the roofs by where the sun is.' : '';
+      note.textContent = !d.stringsFound ? 'No separate ' + nm.toLowerCase() + ' roof readings yet, so only the forecast is shown.' + est : n >= 6 ? nm + ' made ' + fmt(a, 1) + ' kWh against ' + fmt(f, 1) + ' forecast over the same half hours (' + (f > 0.2 ? (a >= f ? '+' : '-') + Math.abs(Math.round((a - f) / f * 100)) + '%' : 'too little to compare') + '). The forecast is the weather copy saved at the time with today\'s learned correction.' + est : (ok ? 'Not enough overlap yet to compare.' + est : '');
     }
     roofChart($('chSolE'), $('solENote'), d.east, d.eastFc, 'var(--ours)', 'East');
     roofChart($('chSolW'), $('solWNote'), d.west, d.westFc, 'var(--solis)', 'West');
@@ -1237,6 +1243,17 @@
       var o2 = { x: hx, series: s.length ? s : [{ name: 'none', color: c[5], values: hx.map(function () { return null; }) }], yFmt: function (v) { return fmt(v, c[1] === 'rain' ? 1 : 0) + c[2]; }, xTickIdx: [0, 4, 8, 12, 16, 20], h: 150, label: c[1], empty: 'Fills in as the hourly weather copy is saved.' };
       if (c[3] !== null) o2.yMin = c[3]; if (c[4] !== null) o2.yMax = c[4]; lineChart($(c[0]), o2);
     });
+    // other weather models
+    var MD = d.models || {}, mnames = Object.keys(MD), mcol = ['var(--ours)', 'var(--solis)', 'var(--plain)', 'var(--perfect)', 'var(--axis)'], nice = { best_match: 'Open-Meteo best', ukmo_seamless: 'UK Met Office', icon_seamless: 'ICON (Germany)', ecmwf_ifs025: 'ECMWF (Europe)', gfs_seamless: 'GFS (USA)' };
+    var mser = mnames.map(function (m, i) { return { name: nice[m] || m, color: mcol[i % 5], dash: '2 4', values: MD[m].sw }; });
+    if (A && A.sw) mser.push({ name: 'Real', color: 'var(--ink)', values: A.sw });
+    solLegend($('solLegend3'), mser.map(function (s, i) { return [s.name, s.color, s.dash ? 1 : 0]; }));
+    lineChart($('chSolModels'), { x: hx, series: mser.length ? mser : [{ name: 'none', color: 'var(--ours)', values: hx.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 0) + ' W/m²'; }, xTickIdx: [0, 4, 8, 12, 16, 20], h: 170, label: 'Sunshine by weather model', empty: 'Fills in every three hours once the weather models are being saved. The GitHub weather job has to run once with the new version first.' });
+    var MS = r.modelScore || [], mbox = $('solModelScore'); clear(mbox);
+    if (MS.length) { mbox.appendChild(el('div', { class: 'sub' }, 'Closest to the real sunshine over the last ' + MS[0].days + ' day' + (MS[0].days === 1 ? '' : 's') + ' (average miss in W/m², lower is better):')); MS.forEach(function (s, i) { var q = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('span', null, (i === 0 ? '★ ' : '') + (nice[s.model] || s.model))); q.appendChild(el('span', null, fmt(s.maeW, 0) + ' W/m², ' + (s.biasPct === null ? '' : (s.biasPct > 0 ? 'too bright by ' : 'too dim by ') + Math.abs(s.biasPct) + '%'))); mbox.appendChild(q); }); }
+    // notes
+    $('solNoteForm').hidden = !ACC.owner;
+    gs('getNotes', [(window.__ACCESS__ || {}).key || ''], function (nr) { var nb = $('solNotes'); clear(nb); (nr.notes || []).slice(0, 15).forEach(function (n) { var q = el('div', { style: 'padding:5px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('b', null, dayLabel(n.date) + ': ')); q.appendChild(document.createTextNode(n.text)); nb.appendChild(q); }); if (!(nr.notes || []).length) nb.appendChild(el('div', { class: 'sub' }, 'No notes yet.')); }, function () {});
     // days table
     var days = r.days || [], rows = days.slice().reverse().map(function (y) {
       var sunA = y.sunE === undefined || y.sunE === null ? null : (y.sunE * 4.9 + y.sunW * 5.88) / 10.78, sunF = y.fcSunE === null || y.fcSunE === undefined ? null : (y.fcSunE * 4.9 + y.fcSunW * 5.88) / 10.78;
@@ -1259,6 +1276,7 @@
   function loadSolar(dt) { $('solMsg').textContent = 'Loading…'; gs('getSolarModel', [(window.__ACCESS__ || {}).key || '', dt || solSel || ''], renderSolar, function (e) { $('solMsg').textContent = 'Could not load: ' + e; }); }
   function solShift(n) { var cur = (SOLD && SOLD.date) || $('solDate').value; if (!cur) return; var t = new Date(cur + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); solSel = t.toISOString().slice(0, 10); if (SOLD && solSel > SOLD.today) { solSel = SOLD.today; } loadSolar(solSel); }
   $('solPrev').addEventListener('click', function () { solShift(-1); }); $('solNext').addEventListener('click', function () { solShift(1); });
+  $('solNoteAdd').addEventListener('click', function () { var t = $('solNoteText').value; if (!t.trim()) return; var b = $('solNoteAdd'); b.disabled = true; gs('noteAdd', [t, (SOLD && SOLD.date) || ''], function () { b.disabled = false; $('solNoteText').value = ''; loadSolar(solSel); }, function (e) { b.disabled = false; $('solMsg').textContent = 'Could not save: ' + e; }); });
   $('solToday').addEventListener('click', function () { solSel = ''; loadSolar(''); });
   $('solDate').addEventListener('change', function () { solSel = $('solDate').value; loadSolar(solSel); });
   document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('.seg button'); if (b && b.textContent === 'Solar') loadSolar(solSel); });
