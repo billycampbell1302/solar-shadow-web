@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '99b71b721b', u = new URL(location.href);
+    var id = '08b6c01ac8', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -814,6 +814,9 @@
   function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
   function gbp(p, sign) { if (p === null || p === undefined || isNaN(p)) return '–'; var v = p / 100, s = v < 0 ? '-' : (sign && v > 0 ? '+' : ''); return s + '£' + Math.abs(v).toFixed(2); }
   function fmt(n, d) { return n === null || n === undefined || n === '' || isNaN(n) ? '–' : Number(n).toFixed(d); }
+  /* the ONE way kWh are added up from half-hour kW lists (made and forecast always over the same half hours) */
+  function kwhSum(a) { var t = 0, n = 0; (a || []).forEach(function (v) { if (v !== null && v !== undefined && !isNaN(v)) { t += v * 0.5; n++; } }); return n ? t : null; }
+  function kwhPair(m, f) { var a = 0, b = 0, n = 0; (m || []).forEach(function (v, i) { if (v !== null && v !== undefined && f && f[i] !== null && f[i] !== undefined) { a += v * 0.5; b += f[i] * 0.5; n++; } }); return { made: a, fc: b, n: n }; }
   function hhmm(ms) { return new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(ms)); }
   function dayLabel(ds) { var p = ds.split('-'); return new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]))); }
   function ago(min) { return min < 1 ? 'just now' : min < 90 ? Math.round(min) + ' min ago' : Math.round(min / 60) + ' h ago'; }
@@ -1212,11 +1215,11 @@
     // all panels: the same two lines as the main forecast chart
     var tot = d.pvKw || [], fc = d.pvFcKw || [];
     lineChart($('chSolAll'), { x: x, series: [{ name: 'Solar made', color: 'var(--plain)', values: tot.length ? tot : x.map(function () { return null; }) }, { name: 'Forecast made beforehand', color: 'var(--plain)', dash: '2 4', values: fc.length ? fc : x.map(function () { return null; }) }, { name: 'Blended forecast (testing)', color: 'var(--perfect)', dash: '5 3', values: (d.blendFc && d.blendFc.length) ? d.blendFc : x.map(function () { return null; }) }], yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: 'All panels, forecast against made', empty: 'No solar readings saved for this day.' });
-    var ta = 0, tf = 0, tn = 0; tot.forEach(function (v, i) { if (v !== null && fc[i] !== null && fc[i] !== undefined) { ta += v * 0.5; tf += fc[i] * 0.5; tn++; } });
+    var kp = kwhPair(tot, fc), ta = kp.made, tf = kp.fc, tn = kp.n;
     $('solAllNote').textContent = tn >= 6 ? 'Made ' + fmt(ta, 1) + ' kWh against ' + fmt(tf, 1) + ' forecast over the same half hours' + (tf > 0.2 ? ' (' + (ta >= tf ? '+' : '-') + Math.abs(Math.round((ta - tf) / tf * 100)) + '%)' : '') + '.' : '';
     // day totals: made so far against forecast, for all panels and each roof
-    function sumK(a) { var s = 0, n = 0; (a || []).forEach(function (v) { if (v !== null && v !== undefined) { s += v * 0.5; n++; } }); return n ? s : null; }
-    function both(m, f) { var a = 0, b = 0, n = 0; (m || []).forEach(function (v, i) { if (v !== null && v !== undefined && f && f[i] !== null && f[i] !== undefined) { a += v * 0.5; b += f[i] * 0.5; n++; } }); return n >= 4 ? [a, b] : null; }
+    function sumK(a) { return kwhSum(a); }
+    function both(m, f) { var q = kwhPair(m, f); return q.n >= 4 ? [q.made, q.fc] : null; }
     var tl = $('solTiles'); clear(tl);
     [['All panels', tot, fc, true], ['East roof', d.east, d.eastFc, d.stringsFound], ['West roof', d.west, d.westFc, d.stringsFound]].forEach(function (z) {
       var madeT = z[3] ? sumK(z[1]) : null, bo = z[3] ? both(z[1], z[2]) : null, whole = sumK(z[2]), tile = el('div', { class: 'tile' });
@@ -1261,7 +1264,7 @@
       if (sv.some(function (v) { return v !== null; })) ex.push({ name: nm + ' Solcast view', color: 'var(--axis)', dash: '1 4', values: sv });
       solLegend($('solLeg' + nm[0]), [[nm + ' made', col], [nm + ' forecast made beforehand', col, 1]].concat(ex.map(function (e) { return [e.name.replace(nm + ' ', '').replace(/^./, function (c) { return c.toUpperCase(); }), e.color, 1]; })));
       lineChart(host, { x: x, series: [{ name: nm + ' made', color: col, values: d.stringsFound ? made : x.map(function () { return null; }) }, { name: nm + ' forecast', color: col, dash: '2 4', values: fcst || x.map(function () { return null; }) }].concat(ex), yMin: 0, yFmt: function (v) { return fmt(v, 1) + ' kW'; }, xTickIdx: tk, label: nm + ' roof, forecast against made', empty: 'Fills in as the roof readings and the hourly weather copy are saved.' });
-      var a = 0, f = 0, n = 0; (made || []).forEach(function (v, i) { if (v !== null && fcst && fcst[i] !== null && fcst[i] !== undefined) { a += v * 0.5; f += fcst[i] * 0.5; n++; } });
+      var kq = kwhPair(made, fcst), a = kq.made, f = kq.fc, n = kq.n;
       var est = ' Each roof has its own forecast: its size, its own sunlight and its own learned shading.';
       note.textContent = !d.stringsFound ? 'No separate ' + nm.toLowerCase() + ' roof readings yet, so only the forecast is shown.' + est : n >= 6 ? nm + ' made ' + fmt(a, 1) + ' kWh against ' + fmt(f, 1) + ' forecast over the same half hours (' + (f > 0.2 ? (a >= f ? '+' : '-') + Math.abs(Math.round((a - f) / f * 100)) + '%' : 'too little to compare') + '). The forecast is the weather copy saved at the time ' + est : (ok ? 'Not enough overlap yet to compare.' + est : '');
     }
