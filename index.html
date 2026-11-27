@@ -5,7 +5,7 @@
 <script>
 (function () {
   try {
-    var id = '4f16776db3', u = new URL(location.href);
+    var id = '014581468f', u = new URL(location.href);
     fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j || !j.id || j.id === id || u.searchParams.get('_v') === j.id) return;
       u.searchParams.set('_v', j.id); location.replace(u.toString());
@@ -1253,7 +1253,7 @@
     M.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' }, 'The east and west roof angles are still marked in the code as needing the installer to confirm them. Once east and west output is recorded, the data will show whether they are right.'));
     // capture
     var C = $('solCapture'); clear(C);
-    var nice = { PVDetail: 'Each roof, every reading', WeatherFc: 'Weather behind each forecast', WeatherActual: 'Real weather, each morning', RawHourly: 'Full inverter reply, hourly', PVCheck: 'Forecast against actual, every reading', SolcastSnaps: 'Solcast forecasts' };
+    var nice = { PVDetail: 'Each roof, every reading', WeatherFc: 'Weather behind each forecast', WeatherActual: 'Real weather, each morning', RawHourly: 'Full inverter reply, hourly', InverterSettings: 'Inverter setting changes', PVCheck: 'Forecast against actual, every reading', SolcastSnaps: 'Solcast forecasts' };
     (r.capture || []).forEach(function (c) { var q = el('div', { style: 'display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid var(--grid)' }); q.appendChild(el('span', null, nice[c.name] || c.name)); q.appendChild(el('span', { style: 'text-align:right' }, c.rows ? c.rows.toLocaleString('en-GB') + ' rows, since ' + new Date(c.from).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'nothing yet')); C.appendChild(q); });
   }
   function loadSolar(dt) { $('solMsg').textContent = 'Loading…'; gs('getSolarModel', [(window.__ACCESS__ || {}).key || '', dt || solSel || ''], renderSolar, function (e) { $('solMsg').textContent = 'Could not load: ' + e; }); }
